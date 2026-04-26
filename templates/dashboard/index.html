@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb">
+    <span class="breadcrumb-current">Dashboard</span>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="page-header-left">
+        <h1 class="page-title">Dashboard</h1>
+        <p class="page-subtitle">Manufacturing system overview</p>
+    </div>
+</div>
+
+<div class="stat-grid">
+    <div class="stat-card">
+        <div class="stat-label">Total Components</div>
+        <div class="stat-value">{{ stats.components }}</div>
+        <div class="stat-sub">{{ stats.active_components }} active</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Suppliers</div>
+        <div class="stat-value">{{ stats.suppliers }}</div>
+        <div class="stat-sub">{{ stats.approved_suppliers }} approved</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Specifications</div>
+        <div class="stat-value">{{ stats.active_components }}</div>
+        <div class="stat-sub">Ready to generate</div>
+    </div>
+</div>
+
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+    <div class="card">
+        <div class="card-header">
+            <span class="card-title">Recent Components</span>
+            <a href="{{ url_for('components.index') }}" class="btn btn-sm btn-ghost">View all</a>
+        </div>
+        <div class="card-body" style="padding: 0;">
+            {% if recent_components %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Type</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for c in recent_components %}
+                    <tr>
+                        <td>
+                            <a href="{{ url_for('components.detail', id=c.id) }}">{{ c.name }}</a>
+                            {% if c.code %}<br><small style="color: var(--color-text-muted); font-family: monospace;">{{ c.code }}</small>{% endif %}
+                        </td>
+                        <td>{{ c.component_type }}</td>
+                        <td>
+                            {% set s = c.status | lower | replace(' ', '-') %}
+                            <span class="badge badge-{{ s }}">{{ c.status }}</span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="empty-state" style="padding: 32px;">
+                <p>No components yet. <a href="{{ url_for('components.new') }}">Add the first one.</a></p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <span class="card-title">Quick Actions</span>
+        </div>
+        <div class="card-body">
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+                <a href="{{ url_for('components.new') }}" class="btn btn-primary">+ New Component</a>
+                <a href="{{ url_for('suppliers.new') }}" class="btn btn-secondary">+ New Supplier</a>
+                <a href="{{ url_for('specifications.index') }}" class="btn btn-secondary">Generate Spec Sheet</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% block title %}Edit Spec — {{ component.name }}{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb">
+    <a href="{{ url_for('dashboard.index') }}">Dashboard</a>
+    <span class="breadcrumb-sep">/</span>
+    <a href="{{ url_for('specifications.index') }}">Specifications</a>
+    <span class="breadcrumb-sep">/</span>
+    <span class="breadcrumb-current">{{ component.name }}</span>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="page-header-left">
+        <h1 class="page-title">Edit Specification — {{ component.name }}</h1>
+        <p class="page-subtitle">{{ component.code or 'No code' }} &middot; {{ component.component_type }}</p>
+    </div>
+    <div class="page-actions">
+        <a href="{{ url_for('specifications.preview', component_id=component.id) }}" class="btn btn-secondary">Preview</a>
+        <a href="{{ url_for('components.detail', id=component.id) }}" class="btn btn-ghost">Component Detail</a>
+    </div>
+</div>
+
+<form method="post">
+    <div class="card" style="margin-bottom:16px;">
+        <div class="card-header"><span class="card-title">Nutritional Composition (per 100g)</span></div>
+        <div class="card-body">
+            <div class="form-row">
+                {% for field in nutrition_fields %}
+                <div class="form-group">
+                    <label>{{ field.label }} ({{ field.unit }})</label>
+                    <input type="number" name="{{ field.key }}" step="0.01" min="0"
+                           value="{{ spec.get(field.key) if spec.get(field.key) is not none else '' }}">
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <div class="card" style="margin-bottom:16px;">
+        <div class="card-header"><span class="card-title">GMO &amp; Origin</span></div>
+        <div class="card-body">
+            <div class="form-row">
+                <div class="form-group">
+                    <label>GMO Status</label>
+                    <select name="gmo_status">
+                        <option value="">Select…</option>
+                        {% for o in gmo_options %}<option value="{{ o }}" {{ 'selected' if spec.gmo_status == o }}>{{ o }}</option>{% endfor %}
+                    </select>
+                </div>
+                <div class="form-group"><label>GMO Certificate Reference</label><input type="text" name="gmo_certificate" value="{{ spec.gmo_certificate or '' }}"></div>
+            </div>
+            <div class="form-group"><label>GMO Details</label><textarea name="gmo_details" rows="2">{{ spec.gmo_details or '' }}</textarea></div>
+            <div class="form-row">
+                <div class="form-group"><label>Countries of Origin</label><input type="text" name="countries_of_origin" value="{{ spec.countries_of_origin or '' }}"></div>
+                <div class="form-group"><label>Countries of Manufacture</label><input type="text" name="countries_of_manufacture" value="{{ spec.countries_of_manufacture or '' }}"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card" style="margin-bottom:16px;">
+        <div class="card-header"><span class="card-title">Certifications</span></div>
+        <div class="card-body">
+            <div class="form-row-4">
+                {% for cert_key, cert_label in [('certification_brc','BRC/BRCGS'),('certification_rspo','RSPO'),('certification_utz_fairtrade','UTZ/Fairtrade'),('certification_halal','Halal'),('certification_kosher','Kosher'),('certification_organic','Organic')] %}
+                <div class="form-group">
+                    <label>{{ cert_label }}</label>
+                    <select name="{{ cert_key }}">
+                        <option value="">—</option>
+                        {% for o in cert_options %}<option value="{{ o }}" {{ 'selected' if spec.get(cert_key) == o }}>{{ o }}</option>{% endfor %}
+                    </select>
+                </div>
+                {% endfor %}
+            </div>
+            <div class="form-group"><label>Certification Details</label><textarea name="certification_details" rows="2">{{ spec.certification_details or '' }}</textarea></div>
+        </div>
+    </div>
+
+    <div class="card" style="margin-bottom:16px;">
+        <div class="card-header"><span class="card-title">Specification Reference</span></div>
+        <div class="card-body">
+            <div class="form-row">
+                <div class="form-group"><label>Specification Number</label><input type="text" name="current_specification_number" value="{{ spec.current_specification_number or '' }}"></div>
+                <div class="form-group"><label>Issue Date</label><input type="date" name="current_specification_issued_date" value="{{ spec.current_specification_issued_date or '' }}"></div>
+            </div>
+            <div class="form-row">
+                <div class="form-group"><label>Next Review Date</label><input type="date" name="next_spec_review_date" value="{{ spec.next_spec_review_date or '' }}"></div>
+                <div class="form-group"><label>HS Code</label><input type="text" name="hs_code" value="{{ spec.hs_code or '' }}"></div>
+            </div>
+            <div class="form-group"><label>Notes</label><textarea name="notes" rows="3">{{ spec.notes or '' }}</textarea></div>
+        </div>
+    </div>
+
+    <div style="display:flex; gap:10px;">
+        <button type="submit" class="btn btn-primary">Save &amp; Preview</button>
+        <a href="{{ url_for('specifications.preview', component_id=component.id) }}" class="btn btn-ghost">Cancel</a>
+    </div>
+</form>
+{% endblock %}

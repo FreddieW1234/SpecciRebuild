@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block title %}Components{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb">
+    <a href="{{ url_for('dashboard.index') }}">Dashboard</a>
+    <span class="breadcrumb-sep">/</span>
+    <span class="breadcrumb-current">Components</span>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="page-header-left">
+        <h1 class="page-title">Components</h1>
+        <p class="page-subtitle">{{ components|length }} component{{ 's' if components|length != 1 }}</p>
+    </div>
+    <div class="page-actions">
+        <a href="{{ url_for('components.new') }}" class="btn btn-primary">+ New Component</a>
+    </div>
+</div>
+
+<div class="toolbar">
+    <form method="get" style="display:flex; gap:10px; flex-wrap:wrap; width:100%;">
+        <input type="text" name="q" value="{{ search }}" placeholder="Search by name or code…" class="search-input">
+        <select name="type" style="width:220px;">
+            <option value="">All types</option>
+            {% for t in component_types %}
+            <option value="{{ t }}" {{ 'selected' if type_filter == t }}>{{ t }}</option>
+            {% endfor %}
+        </select>
+        <select name="status" style="width:180px;">
+            <option value="">All statuses</option>
+            {% for s in statuses %}
+            <option value="{{ s }}" {{ 'selected' if status_filter == s }}>{{ s }}</option>
+            {% endfor %}
+        </select>
+        <button type="submit" class="btn btn-secondary">Filter</button>
+        {% if search or type_filter or status_filter %}
+        <a href="{{ url_for('components.index') }}" class="btn btn-ghost">Clear</a>
+        {% endif %}
+    </form>
+</div>
+
+{% if components %}
+<div class="table-wrapper">
+    <table>
+        <thead>
+            <tr>
+                <th>Code</th>
+                <th>Name</th>
+                <th>Type</th>
+                <th>Level</th>
+                <th>Status</th>
+                <th>Updated</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for c in components %}
+            <tr>
+                <td><span style="font-family:monospace; font-size:12px;">{{ c.code or '—' }}</span></td>
+                <td><a href="{{ url_for('components.detail', id=c.id) }}">{{ c.name }}</a></td>
+                <td>{{ c.component_type }}</td>
+                <td style="font-size:12px; color:var(--color-text-muted);">{{ c.product_level }}</td>
+                <td>
+                    {% set s = c.status | lower | replace(' ', '-') %}
+                    <span class="badge badge-{{ s }}">{{ c.status }}</span>
+                </td>
+                <td style="font-size:12px; color:var(--color-text-muted);">{{ c.updated_at.strftime('%d %b %Y') if c.updated_at else '—' }}</td>
+                <td>
+                    <div class="table-actions">
+                        <a href="{{ url_for('specifications.preview', component_id=c.id) }}" class="btn btn-sm btn-secondary">Spec</a>
+                        <a href="{{ url_for('components.edit', id=c.id) }}" class="btn btn-sm btn-secondary">Edit</a>
+                        <form method="post" action="{{ url_for('components.delete', id=c.id) }}"
+                              data-confirm="Delete '{{ c.name }}'?">
+                            <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                        </form>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="card">
+    <div class="empty-state">
+        <div class="empty-state-icon">📦</div>
+        <h3>No components yet</h3>
+        <p>Add your first component to get started.</p>
+        <a href="{{ url_for('components.new') }}" class="btn btn-primary">New Component</a>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,660 @@
+{% extends "base.html" %}
+{% block title %}{{ component.name }}{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb">
+    <a href="{{ url_for('dashboard.index') }}">Dashboard</a>
+    <span class="breadcrumb-sep">/</span>
+    <a href="{{ url_for('components.index') }}">Components</a>
+    <span class="breadcrumb-sep">/</span>
+    <span class="breadcrumb-current">{{ component.name }}</span>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="page-header-left">
+        <div class="component-code">{{ component.code or 'No code assigned' }}</div>
+        <h1 class="page-title">{{ component.name }}</h1>
+        <div style="display:flex; align-items:center; gap:10px; margin-top:6px;">
+            {% set s = component.status | lower | replace(' ', '-') %}
+            <span class="badge badge-{{ s }}">{{ component.status }}</span>
+            <span style="font-size:12px; color:var(--color-text-muted);">{{ component.component_type }}</span>
+        </div>
+    </div>
+    <div class="page-actions">
+        <a href="{{ url_for('specifications.preview', component_id=component.id) }}" class="btn btn-success">Generate Spec Sheet</a>
+        <a href="{{ url_for('components.edit', id=component.id) }}" class="btn btn-primary">Edit</a>
+        <form method="post" action="{{ url_for('components.delete', id=component.id) }}"
+              data-confirm="Permanently delete '{{ component.name }}'?">
+            <button type="submit" class="btn btn-danger">Delete</button>
+        </form>
+    </div>
+</div>
+
+<div class="tabs">
+    <div class="tab-nav">
+        <a class="tab-btn active" data-tab="overview" href="#overview">Overview</a>
+        <a class="tab-btn" data-tab="constituents" href="#constituents">Constituents ({{ constituents|length }})</a>
+        <a class="tab-btn" data-tab="allergens" href="#allergens">Allergens</a>
+        <a class="tab-btn" data-tab="spec" href="#spec">Nutritional / Spec</a>
+        <a class="tab-btn" data-tab="storage" href="#storage">Storage</a>
+        <a class="tab-btn" data-tab="packaging" href="#packaging">Packaging</a>
+        <a class="tab-btn" data-tab="analytical" href="#analytical">Analytical</a>
+        <a class="tab-btn" data-tab="micro" href="#micro">Micro Tests</a>
+        <a class="tab-btn" data-tab="additives" href="#additives">Additives</a>
+        <a class="tab-btn" data-tab="palm" href="#palm">Palm Oil</a>
+    </div>
+
+    {# ==================== OVERVIEW ==================== #}
+    <div id="overview" class="tab-panel active" style="margin-top:20px;">
+        <div class="card">
+            <div class="card-header"><span class="card-title">Component Details</span>
+                <a href="{{ url_for('components.edit', id=component.id) }}" class="btn btn-sm btn-secondary">Edit</a>
+            </div>
+            <div class="card-body">
+                <dl style="display:grid; grid-template-columns:220px 1fr; gap:8px 16px; font-size:13px;">
+                    <dt style="font-weight:600; color:var(--color-text-muted);">Code</dt>
+                    <dd style="font-family:monospace;">{{ component.code or '—' }}</dd>
+                    <dt style="font-weight:600; color:var(--color-text-muted);">Name</dt>
+                    <dd>{{ component.name }}</dd>
+                    <dt style="font-weight:600; color:var(--color-text-muted);">Type</dt>
+                    <dd>{{ component.component_type }}</dd>
+                    <dt style="font-weight:600; color:var(--color-text-muted);">Product Level</dt>
+                    <dd>{{ component.product_level }}</dd>
+                    <dt style="font-weight:600; color:var(--color-text-muted);">Manufactured / Purchased</dt>
+                    <dd>{{ component.manufactured_purchased }}</dd>
+                    <dt style="font-weight:600; color:var(--color-text-muted);">Status</dt>
+                    <dd>{{ component.status }}</dd>
+                    <dt style="font-weight:600; color:var(--color-text-muted);">Description</dt>
+                    <dd style="white-space:pre-wrap;">{{ component.description or '—' }}</dd>
+                    <dt style="font-weight:600; color:var(--color-text-muted);">Created</dt>
+                    <dd>{{ component.created_at.strftime('%d %b %Y') if component.created_at else '—' }}</dd>
+                    <dt style="font-weight:600; color:var(--color-text-muted);">Last Updated</dt>
+                    <dd>{{ component.updated_at.strftime('%d %b %Y') if component.updated_at else '—' }}</dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+
+    {# ==================== CONSTITUENTS ==================== #}
+    <div id="constituents" class="tab-panel" style="margin-top:20px;">
+        <div class="card">
+            <div class="card-header"><span class="card-title">Ingredient / Constituent Breakdown</span></div>
+            <div class="card-body" style="padding:0 0 16px;">
+                <form method="post" action="{{ url_for('components.save_constituents', id=component.id) }}">
+                    <div style="overflow-x:auto;">
+                        <table class="inline-table" id="constituents-table">
+                            <thead>
+                                <tr>
+                                    <th>Name *</th>
+                                    <th>BA Code</th>
+                                    <th>Level</th>
+                                    <th>%</th>
+                                    <th>Label?</th>
+                                    <th>Country of Origin</th>
+                                    <th>E Number</th>
+                                    <th>Supplier</th>
+                                    <th>Notes</th>
+                                    <th style="width:32px;"></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for i, c in enumerate(constituents) %}
+                                <tr>
+                                    <td><input type="text" name="row_{{ i }}_constituent_name" value="{{ c.constituent_name or '' }}" required style="min-width:140px;"></td>
+                                    <td><input type="text" name="row_{{ i }}_constituent_ba_code" value="{{ c.constituent_ba_code or '' }}" style="width:80px;"></td>
+                                    <td><input type="text" name="row_{{ i }}_constituent_level" value="{{ c.constituent_level or '' }}" style="width:70px;"></td>
+                                    <td><input type="number" name="row_{{ i }}_composition_percent" value="{{ c.composition_percent or '' }}" step="0.01" min="0" max="100" style="width:70px;"></td>
+                                    <td style="text-align:center;"><input type="checkbox" name="row_{{ i }}_declare_on_label" {{ 'checked' if c.declare_on_label }}></td>
+                                    <td><input type="text" name="row_{{ i }}_country_of_origin" value="{{ c.country_of_origin or '' }}" style="width:120px;"></td>
+                                    <td><input type="text" name="row_{{ i }}_e_number" value="{{ c.e_number or '' }}" style="width:70px;"></td>
+                                    <td><input type="text" name="row_{{ i }}_supplier_details" value="{{ c.supplier_details or '' }}" style="width:120px;"></td>
+                                    <td><input type="text" name="row_{{ i }}_notes" value="{{ c.notes or '' }}" style="width:120px;"></td>
+                                    <td><button type="button" data-remove-row class="btn btn-sm btn-danger" style="padding:2px 6px;">×</button></td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div style="padding:12px 16px; display:flex; gap:10px; align-items:center;">
+                        <button type="button" data-add-row="constituents-table" class="btn btn-sm btn-secondary">+ Add Row</button>
+                        <button type="submit" class="btn btn-primary btn-sm">Save Constituents</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    {# ==================== ALLERGENS ==================== #}
+    <div id="allergens" class="tab-panel" style="margin-top:20px;">
+        <div class="card">
+            <div class="card-header"><span class="card-title">Allergen Status</span></div>
+            <div class="card-body">
+                <form method="post" action="{{ url_for('components.save_allergens', id=component.id) }}">
+                    <p style="font-size:12px; color:var(--color-text-muted); margin-bottom:16px;">Set the status for all 14 UK regulated allergens. Any allergen not set will be left unchanged.</p>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:0 24px;">
+                        {% for allergen in allergens %}
+                        {% set current = allergen_map.get(allergen, {}) %}
+                        <div class="allergen-row">
+                            <span class="allergen-name">{{ allergen }}</span>
+                            <select name="allergen_{{ allergen }}" class="allergen-select" style="width:180px;">
+                                <option value="">— not set —</option>
+                                {% for st in allergen_statuses %}
+                                <option value="{{ st }}" {{ 'selected' if current.get('status') == st }}>{{ st }}</option>
+                                {% endfor %}
+                            </select>
+                            <input type="text" name="notes_{{ allergen }}" value="{{ current.get('notes', '') or '' }}" placeholder="Notes" style="flex:1; min-width:100px;">
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <div style="margin-top:20px;">
+                        <button type="submit" class="btn btn-primary">Save Allergen Status</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    {# ==================== NUTRITIONAL / SPEC ==================== #}
+    <div id="spec" class="tab-panel" style="margin-top:20px;">
+        <form method="post" action="{{ url_for('components.save_spec', id=component.id) }}">
+            <div class="card" style="margin-bottom:16px;">
+                <div class="card-header"><span class="card-title">Product Description &amp; Sensory</span></div>
+                <div class="card-body">
+                    <div class="form-row">
+                        <div class="form-group"><label>Product Description</label><textarea name="product_description" rows="2">{{ spec.product_description or '' }}</textarea></div>
+                        <div class="form-group"><label>Colour</label><input type="text" name="product_colour" value="{{ spec.product_colour or '' }}"></div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group"><label>Taste</label><input type="text" name="product_taste" value="{{ spec.product_taste or '' }}"></div>
+                        <div class="form-group"><label>Aroma</label><input type="text" name="product_aroma" value="{{ spec.product_aroma or '' }}"></div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group"><label>Texture</label><input type="text" name="product_texture" value="{{ spec.product_texture or '' }}"></div>
+                        <div class="form-group"><label>Appearance</label><input type="text" name="product_appearance" value="{{ spec.product_appearance or '' }}"></div>
+                    </div>
+                    <div class="form-group"><label>Defects / Tolerances</label><textarea name="product_defects" rows="2">{{ spec.product_defects or '' }}</textarea></div>
+                </div>
+            </div>
+
+            <div class="card" style="margin-bottom:16px;">
+                <div class="card-header"><span class="card-title">Nutritional Composition (per 100g)</span></div>
+                <div class="card-body">
+                    <div class="form-row">
+                        {% for field in nutrition_fields %}
+                        <div class="form-group">
+                            <label>{{ field.label }} ({{ field.unit }})</label>
+                            <input type="number" name="{{ field.key }}" step="0.01" min="0"
+                                   value="{{ spec.get(field.key, '') if spec.get(field.key) is not none else '' }}">
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group"><label>Cocoa Dry Solids (%)</label><input type="number" name="cocoa_dry_solids" step="0.01" value="{{ spec.cocoa_dry_solids or '' }}"></div>
+                        <div class="form-group"><label>Milk Fat (%)</label><input type="number" name="milk_fat_percent" step="0.01" value="{{ spec.milk_fat_percent or '' }}"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card" style="margin-bottom:16px;">
+                <div class="card-header"><span class="card-title">GMO &amp; Origin</span></div>
+                <div class="card-body">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>GMO Status</label>
+                            <select name="gmo_status">
+                                <option value="">Select…</option>
+                                {% for o in gmo_options %}<option value="{{ o }}" {{ 'selected' if spec.gmo_status == o }}>{{ o }}</option>{% endfor %}
+                            </select>
+                        </div>
+                        <div class="form-group"><label>GMO Certificate Reference</label><input type="text" name="gmo_certificate" value="{{ spec.gmo_certificate or '' }}"></div>
+                    </div>
+                    <div class="form-group"><label>GMO Details</label><textarea name="gmo_details" rows="2">{{ spec.gmo_details or '' }}</textarea></div>
+                    <div class="form-row">
+                        <div class="form-group"><label>Countries of Origin</label><input type="text" name="countries_of_origin" value="{{ spec.countries_of_origin or '' }}"></div>
+                        <div class="form-group"><label>Countries of Manufacture</label><input type="text" name="countries_of_manufacture" value="{{ spec.countries_of_manufacture or '' }}"></div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group"><label>Function (Primary)</label><input type="text" name="function_primary" value="{{ spec.function_primary or '' }}"></div>
+                        <div class="form-group"><label>Function (Other)</label><input type="text" name="function_other" value="{{ spec.function_other or '' }}"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card" style="margin-bottom:16px;">
+                <div class="card-header"><span class="card-title">Certifications</span></div>
+                <div class="card-body">
+                    <div class="form-row-4">
+                        {% for cert_key, cert_label in [('certification_brc','BRC/BRCGS'),('certification_rspo','RSPO'),('certification_utz_fairtrade','UTZ/Fairtrade'),('certification_halal','Halal'),('certification_kosher','Kosher'),('certification_organic','Organic')] %}
+                        <div class="form-group">
+                            <label>{{ cert_label }}</label>
+                            <select name="{{ cert_key }}">
+                                <option value="">—</option>
+                                {% for o in cert_options %}<option value="{{ o }}" {{ 'selected' if spec.get(cert_key) == o }}>{{ o }}</option>{% endfor %}
+                            </select>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <div class="form-group"><label>Certification Details</label><textarea name="certification_details" rows="2">{{ spec.certification_details or '' }}</textarea></div>
+                </div>
+            </div>
+
+            <div class="card" style="margin-bottom:16px;">
+                <div class="card-header"><span class="card-title">Specification Reference</span></div>
+                <div class="card-body">
+                    <div class="form-row">
+                        <div class="form-group"><label>Specification Number</label><input type="text" name="current_specification_number" value="{{ spec.current_specification_number or '' }}"></div>
+                        <div class="form-group"><label>Issue Date</label><input type="date" name="current_specification_issued_date" value="{{ spec.current_specification_issued_date or '' }}"></div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group"><label>Next Review Date</label><input type="date" name="next_spec_review_date" value="{{ spec.next_spec_review_date or '' }}"></div>
+                        <div class="form-group"><label>HS Code</label><input type="text" name="hs_code" value="{{ spec.hs_code or '' }}"></div>
+                    </div>
+                    <div class="form-group"><label>Notes</label><textarea name="notes" rows="3">{{ spec.notes or '' }}</textarea></div>
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary">Save Spec Data</button>
+        </form>
+    </div>
+
+    {# ==================== STORAGE ==================== #}
+    <div id="storage" class="tab-panel" style="margin-top:20px;">
+        <div class="card">
+            <div class="card-header"><span class="card-title">Storage Conditions &amp; Shelf Life</span></div>
+            <div class="card-body">
+                <form method="post" action="{{ url_for('components.save_storage', id=component.id) }}">
+                    <div class="form-row">
+                        <div class="form-group"><label>Recommended Storage Temp</label><input type="text" name="recommended_storage_temp" value="{{ storage.recommended_storage_temp or '' }}" placeholder="e.g. 15–18"></div>
+                        <div class="form-group"><label>Unit</label>
+                            <select name="recommended_storage_temp_unit">
+                                <option value="°C" {{ 'selected' if storage.recommended_storage_temp_unit == '°C' or not storage.recommended_storage_temp_unit }}>°C</option>
+                                <option value="°F" {{ 'selected' if storage.recommended_storage_temp_unit == '°F' }}>°F</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group"><label>Max Storage Temp</label><input type="text" name="max_storage_temp" value="{{ storage.max_storage_temp or '' }}"></div>
+                        <div class="form-group"><label>Min Storage Temp</label><input type="text" name="min_storage_temp" value="{{ storage.min_storage_temp or '' }}"></div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group"><label>Relative Humidity</label><input type="text" name="relative_humidity" value="{{ storage.relative_humidity or '' }}"></div>
+                        <div class="form-group"><label>Storage Area Type</label><input type="text" name="storage_area_type" value="{{ storage.storage_area_type or '' }}" placeholder="e.g. Ambient, Chilled"></div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group"><label>Suitable for Freezing?</label><input type="text" name="product_suitable_for_freezing" value="{{ storage.product_suitable_for_freezing or '' }}" placeholder="Yes / No"></div>
+                        <div class="form-group"><label>Pest Controlled Storage</label><input type="text" name="pest_controlled_storage" value="{{ storage.pest_controlled_storage or '' }}" placeholder="Yes / No"></div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group"><label>Protect from Light/Oxygen?</label><input type="text" name="protection_light_oxygen" value="{{ storage.protection_light_oxygen or '' }}" placeholder="Yes / No"></div>
+                        <div class="form-group"><label>Avoid Metal Contact?</label><input type="text" name="avoid_metal_contact" value="{{ storage.avoid_metal_contact or '' }}" placeholder="Yes / No"></div>
+                    </div>
+                    <div class="form-section-title" style="margin-top:16px;">Shelf Life</div>
+                    <div class="form-row">
+                        <div class="form-group"><label>Shelf Life from Manufacture</label>
+                            <div style="display:flex; gap:8px;">
+                                <input type="text" name="shelf_life_from_manufacture_value" value="{{ storage.shelf_life_from_manufacture_value or '' }}" style="width:80px;" placeholder="e.g. 24">
+                                <input type="text" name="shelf_life_from_manufacture_unit" value="{{ storage.shelf_life_from_manufacture_unit or '' }}" style="flex:1;" placeholder="Months">
+                            </div>
+                        </div>
+                        <div class="form-group"><label>Min Shelf Life on Delivery</label>
+                            <div style="display:flex; gap:8px;">
+                                <input type="text" name="min_shelf_life_on_delivery_value" value="{{ storage.min_shelf_life_on_delivery_value or '' }}" style="width:80px;">
+                                <input type="text" name="min_shelf_life_on_delivery_unit" value="{{ storage.min_shelf_life_on_delivery_unit or '' }}" style="flex:1;" placeholder="Months">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group"><label>Shelf Life (Unopened)</label>
+                            <div style="display:flex; gap:8px;">
+                                <input type="text" name="shelf_life_unopened_value" value="{{ storage.shelf_life_unopened_value or '' }}" style="width:80px;">
+                                <input type="text" name="shelf_life_unopened_unit" value="{{ storage.shelf_life_unopened_unit or '' }}" style="flex:1;">
+                            </div>
+                        </div>
+                        <div class="form-group"><label>Shelf Life (After Opening)</label>
+                            <div style="display:flex; gap:8px;">
+                                <input type="text" name="shelf_life_after_opening_value" value="{{ storage.shelf_life_after_opening_value or '' }}" style="width:80px;">
+                                <input type="text" name="shelf_life_after_opening_unit" value="{{ storage.shelf_life_after_opening_unit or '' }}" style="flex:1;">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group"><label>Stock Rotation</label><input type="text" name="stock_rotation_requirement" value="{{ storage.stock_rotation_requirement or '' }}" placeholder="e.g. FIFO"></div>
+                    <div class="form-group"><label>Special Storage Instructions</label><textarea name="special_storage_instructions" rows="3">{{ storage.special_storage_instructions or '' }}</textarea></div>
+                    <button type="submit" class="btn btn-primary">Save Storage</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    {# ==================== PACKAGING ==================== #}
+    <div id="packaging" class="tab-panel" style="margin-top:20px;">
+        <div class="card">
+            <div class="card-header"><span class="card-title">Packaging Levels</span></div>
+            <div class="card-body" style="padding:0 0 16px;">
+                <form method="post" action="{{ url_for('components.save_packaging', id=component.id) }}">
+                    <div style="overflow-x:auto;">
+                        <table class="inline-table" id="packaging-table">
+                            <thead>
+                                <tr>
+                                    <th>Level *</th>
+                                    <th>Material / Description</th>
+                                    <th>Food Contact?</th>
+                                    <th>L (mm)</th>
+                                    <th>W (mm)</th>
+                                    <th>H (mm)</th>
+                                    <th>Empty Wt (g)</th>
+                                    <th>Filled Wt (g)</th>
+                                    <th>Barcode</th>
+                                    <th>Units / Next</th>
+                                    <th>Recyclable?</th>
+                                    <th style="width:32px;"></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for i, p in enumerate(packaging) %}
+                                <tr>
+                                    <td>
+                                        <select name="pkg_{{ i }}_packaging_level" style="min-width:160px;">
+                                            <option value="">Select…</option>
+                                            {% for pl in packaging_levels %}
+                                            <option value="{{ pl }}" {{ 'selected' if p.packaging_level == pl }}>{{ pl }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </td>
+                                    <td><input type="text" name="pkg_{{ i }}_description_material_type" value="{{ p.description_material_type or '' }}" style="min-width:140px;"></td>
+                                    <td><input type="text" name="pkg_{{ i }}_food_contact" value="{{ p.food_contact or '' }}" style="width:70px;" placeholder="Yes/No"></td>
+                                    <td><input type="text" name="pkg_{{ i }}_external_dimensions_l" value="{{ p.external_dimensions_l or '' }}" style="width:60px;"></td>
+                                    <td><input type="text" name="pkg_{{ i }}_external_dimensions_w" value="{{ p.external_dimensions_w or '' }}" style="width:60px;"></td>
+                                    <td><input type="text" name="pkg_{{ i }}_external_dimensions_h" value="{{ p.external_dimensions_h or '' }}" style="width:60px;"></td>
+                                    <td><input type="text" name="pkg_{{ i }}_empty_weight_g" value="{{ p.empty_weight_g or '' }}" style="width:70px;"></td>
+                                    <td><input type="text" name="pkg_{{ i }}_filled_weight_g" value="{{ p.filled_weight_g or '' }}" style="width:70px;"></td>
+                                    <td><input type="text" name="pkg_{{ i }}_barcode_code" value="{{ p.barcode_code or '' }}" style="width:100px;"></td>
+                                    <td><input type="text" name="pkg_{{ i }}_units_per_next_level" value="{{ p.units_per_next_level or '' }}" style="width:60px;"></td>
+                                    <td><input type="text" name="pkg_{{ i }}_recyclable" value="{{ p.recyclable or '' }}" style="width:70px;" placeholder="Yes/No"></td>
+                                    <td><button type="button" data-remove-row class="btn btn-sm btn-danger" style="padding:2px 6px;">×</button></td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div style="padding:12px 16px; display:flex; gap:10px;">
+                        <button type="button" data-add-row="packaging-table" class="btn btn-sm btn-secondary">+ Add Level</button>
+                        <button type="submit" class="btn btn-primary btn-sm">Save Packaging</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    {# ==================== ANALYTICAL ==================== #}
+    <div id="analytical" class="tab-panel" style="margin-top:20px;">
+        <div class="card">
+            <div class="card-header"><span class="card-title">Analytical Parameters</span></div>
+            <div class="card-body" style="padding:0 0 16px;">
+                <form method="post" action="{{ url_for('components.save_analytical', id=component.id) }}">
+                    <div style="overflow-x:auto;">
+                        <table class="inline-table" id="analytical-table">
+                            <thead>
+                                <tr>
+                                    <th>Parameter *</th>
+                                    <th>Target Value</th>
+                                    <th>Acceptable Range</th>
+                                    <th>Typical Value</th>
+                                    <th>Method of Analysis</th>
+                                    <th>QC Frequency</th>
+                                    <th style="width:32px;"></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for i, a in enumerate(analytical) %}
+                                <tr>
+                                    <td><input type="text" name="ap_{{ i }}_parameter_name" value="{{ a.parameter_name or '' }}" style="min-width:140px;"></td>
+                                    <td><input type="text" name="ap_{{ i }}_target_value" value="{{ a.target_value or '' }}" style="width:100px;"></td>
+                                    <td><input type="text" name="ap_{{ i }}_acceptable_range" value="{{ a.acceptable_range or '' }}" style="width:120px;"></td>
+                                    <td><input type="text" name="ap_{{ i }}_typical_value" value="{{ a.typical_value or '' }}" style="width:100px;"></td>
+                                    <td><input type="text" name="ap_{{ i }}_method_of_analysis" value="{{ a.method_of_analysis or '' }}" style="width:140px;"></td>
+                                    <td><input type="text" name="ap_{{ i }}_qc_frequency" value="{{ a.qc_frequency or '' }}" style="width:100px;"></td>
+                                    <td><button type="button" data-remove-row class="btn btn-sm btn-danger" style="padding:2px 6px;">×</button></td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div style="padding:12px 16px; display:flex; gap:10px;">
+                        <button type="button" data-add-row="analytical-table" class="btn btn-sm btn-secondary">+ Add Parameter</button>
+                        <button type="submit" class="btn btn-primary btn-sm">Save Parameters</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    {# ==================== MICRO TESTS ==================== #}
+    <div id="micro" class="tab-panel" style="margin-top:20px;">
+        <div class="card">
+            <div class="card-header"><span class="card-title">Microbiological Tests</span></div>
+            <div class="card-body" style="padding:0 0 16px;">
+                <form method="post" action="{{ url_for('components.save_micro', id=component.id) }}">
+                    <div style="overflow-x:auto;">
+                        <table class="inline-table" id="micro-table">
+                            <thead>
+                                <tr>
+                                    <th>Test Name *</th>
+                                    <th>Status</th>
+                                    <th>Test Method</th>
+                                    <th>Positive Release?</th>
+                                    <th>Notes</th>
+                                    <th style="width:32px;"></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for i, m in enumerate(micro) %}
+                                <tr>
+                                    <td><input type="text" name="mt_{{ i }}_test_name" value="{{ m.test_name or '' }}" style="min-width:180px;"></td>
+                                    <td>
+                                        <select name="mt_{{ i }}_status" style="width:130px;">
+                                            <option value="Required" {{ 'selected' if m.status == 'Required' }}>Required</option>
+                                            <option value="Not Required" {{ 'selected' if m.status == 'Not Required' }}>Not Required</option>
+                                            <option value="Completed" {{ 'selected' if m.status == 'Completed' }}>Completed</option>
+                                        </select>
+                                    </td>
+                                    <td><input type="text" name="mt_{{ i }}_test_method" value="{{ m.test_method or '' }}" style="width:120px;"></td>
+                                    <td><input type="text" name="mt_{{ i }}_positive_release" value="{{ m.positive_release or '' }}" style="width:80px;" placeholder="Yes/No"></td>
+                                    <td><input type="text" name="mt_{{ i }}_notes" value="{{ m.notes or '' }}" style="min-width:140px;"></td>
+                                    <td><button type="button" data-remove-row class="btn btn-sm btn-danger" style="padding:2px 6px;">×</button></td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div style="padding:12px 16px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+                        <button type="button" data-add-row="micro-table" class="btn btn-sm btn-secondary">+ Add Test</button>
+                        <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                            {% for t in micro_test_names %}
+                            <button type="button" class="btn btn-sm btn-ghost quick-add-micro" data-name="{{ t }}">+ {{ t }}</button>
+                            {% endfor %}
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-sm" style="margin-left:auto;">Save Micro Tests</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    {# ==================== ADDITIVES ==================== #}
+    <div id="additives" class="tab-panel" style="margin-top:20px;">
+        <div class="card">
+            <div class="card-header"><span class="card-title">Additives &amp; Processing Aids</span></div>
+            <div class="card-body" style="padding:0 0 16px;">
+                <form method="post" action="{{ url_for('components.save_additives', id=component.id) }}">
+                    <div style="overflow-x:auto;">
+                        <table class="inline-table" id="additives-table">
+                            <thead>
+                                <tr>
+                                    <th>Legal Name</th>
+                                    <th>E Number</th>
+                                    <th>Function</th>
+                                    <th>Natural / Artificial</th>
+                                    <th>Level in Product</th>
+                                    <th style="width:32px;"></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for i, a in enumerate(additives) %}
+                                <tr>
+                                    <td><input type="text" name="add_{{ i }}_legal_name" value="{{ a.legal_name or '' }}" style="min-width:160px;"></td>
+                                    <td><input type="text" name="add_{{ i }}_e_number" value="{{ a.e_number or '' }}" style="width:80px;"></td>
+                                    <td><input type="text" name="add_{{ i }}_function" value="{{ a.function or '' }}" style="min-width:120px;"></td>
+                                    <td>
+                                        <select name="add_{{ i }}_natural_artificial" style="width:120px;">
+                                            <option value="">—</option>
+                                            <option value="Natural" {{ 'selected' if a.natural_artificial == 'Natural' }}>Natural</option>
+                                            <option value="Artificial" {{ 'selected' if a.natural_artificial == 'Artificial' }}>Artificial</option>
+                                            <option value="Nature-identical" {{ 'selected' if a.natural_artificial == 'Nature-identical' }}>Nature-identical</option>
+                                        </select>
+                                    </td>
+                                    <td><input type="text" name="add_{{ i }}_level_in_product" value="{{ a.level_in_product or '' }}" style="width:120px;"></td>
+                                    <td><button type="button" data-remove-row class="btn btn-sm btn-danger" style="padding:2px 6px;">×</button></td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div style="padding:12px 16px; display:flex; gap:10px;">
+                        <button type="button" data-add-row="additives-table" class="btn btn-sm btn-secondary">+ Add Additive</button>
+                        <button type="submit" class="btn btn-primary btn-sm">Save Additives</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    {# ==================== PALM OIL ==================== #}
+    <div id="palm" class="tab-panel" style="margin-top:20px;">
+        <div class="card">
+            <div class="card-header"><span class="card-title">Palm Oil Details</span></div>
+            <div class="card-body">
+                <form method="post" action="{{ url_for('components.save_palm', id=component.id) }}">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Contains Palm Oil?</label>
+                            <select name="contains_palm_oil">
+                                <option value="">Select…</option>
+                                {% for o in palm_options %}<option value="{{ o }}" {{ 'selected' if palm.contains_palm_oil == o }}>{{ o }}</option>{% endfor %}
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>RSPO Certified?</label>
+                            <select name="rspo_certified">
+                                <option value="">—</option>
+                                <option value="Yes" {{ 'selected' if palm.rspo_certified == 'Yes' }}>Yes</option>
+                                <option value="No" {{ 'selected' if palm.rspo_certified == 'No' }}>No</option>
+                                <option value="In Progress" {{ 'selected' if palm.rspo_certified == 'In Progress' }}>In Progress</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group"><label>RSPO Supply Chain Model</label><input type="text" name="rspo_supply_chain" value="{{ palm.rspo_supply_chain or '' }}" placeholder="e.g. Mass Balance, Segregated, Book &amp; Claim"></div>
+                        <div class="form-group"><label>RSPO Certificate Number</label><input type="text" name="rspo_cert_number" value="{{ palm.rspo_cert_number or '' }}"></div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group"><label>Certified Percentage (%)</label><input type="number" name="certified_percentage" step="0.01" min="0" max="100" value="{{ palm.certified_percentage or '' }}"></div>
+                        <div class="form-group"><label>Traceability Country</label><input type="text" name="traceability_country" value="{{ palm.traceability_country or '' }}"></div>
+                    </div>
+                    <div class="form-group"><label>Compliance Statement</label><textarea name="compliance_statement" rows="3">{{ palm.compliance_statement or '' }}</textarea></div>
+                    <button type="submit" class="btn btn-primary">Save Palm Oil</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+{# Row templates for JS add-row #}
+<template id="constituents-table-row-template">
+    <tr>
+        <td><input type="text" name="row___IDX___constituent_name" required style="min-width:140px;"></td>
+        <td><input type="text" name="row___IDX___constituent_ba_code" style="width:80px;"></td>
+        <td><input type="text" name="row___IDX___constituent_level" style="width:70px;"></td>
+        <td><input type="number" name="row___IDX___composition_percent" step="0.01" min="0" max="100" style="width:70px;"></td>
+        <td style="text-align:center;"><input type="checkbox" name="row___IDX___declare_on_label"></td>
+        <td><input type="text" name="row___IDX___country_of_origin" style="width:120px;"></td>
+        <td><input type="text" name="row___IDX___e_number" style="width:70px;"></td>
+        <td><input type="text" name="row___IDX___supplier_details" style="width:120px;"></td>
+        <td><input type="text" name="row___IDX___notes" style="width:120px;"></td>
+        <td><button type="button" data-remove-row class="btn btn-sm btn-danger" style="padding:2px 6px;">×</button></td>
+    </tr>
+</template>
+
+<template id="packaging-table-row-template">
+    <tr>
+        <td><select name="pkg___IDX___packaging_level" style="min-width:160px;"><option value="">Select…</option>{% for pl in packaging_levels %}<option value="{{ pl }}">{{ pl }}</option>{% endfor %}</select></td>
+        <td><input type="text" name="pkg___IDX___description_material_type" style="min-width:140px;"></td>
+        <td><input type="text" name="pkg___IDX___food_contact" style="width:70px;" placeholder="Yes/No"></td>
+        <td><input type="text" name="pkg___IDX___external_dimensions_l" style="width:60px;"></td>
+        <td><input type="text" name="pkg___IDX___external_dimensions_w" style="width:60px;"></td>
+        <td><input type="text" name="pkg___IDX___external_dimensions_h" style="width:60px;"></td>
+        <td><input type="text" name="pkg___IDX___empty_weight_g" style="width:70px;"></td>
+        <td><input type="text" name="pkg___IDX___filled_weight_g" style="width:70px;"></td>
+        <td><input type="text" name="pkg___IDX___barcode_code" style="width:100px;"></td>
+        <td><input type="text" name="pkg___IDX___units_per_next_level" style="width:60px;"></td>
+        <td><input type="text" name="pkg___IDX___recyclable" style="width:70px;" placeholder="Yes/No"></td>
+        <td><button type="button" data-remove-row class="btn btn-sm btn-danger" style="padding:2px 6px;">×</button></td>
+    </tr>
+</template>
+
+<template id="analytical-table-row-template">
+    <tr>
+        <td><input type="text" name="ap___IDX___parameter_name" style="min-width:140px;"></td>
+        <td><input type="text" name="ap___IDX___target_value" style="width:100px;"></td>
+        <td><input type="text" name="ap___IDX___acceptable_range" style="width:120px;"></td>
+        <td><input type="text" name="ap___IDX___typical_value" style="width:100px;"></td>
+        <td><input type="text" name="ap___IDX___method_of_analysis" style="width:140px;"></td>
+        <td><input type="text" name="ap___IDX___qc_frequency" style="width:100px;"></td>
+        <td><button type="button" data-remove-row class="btn btn-sm btn-danger" style="padding:2px 6px;">×</button></td>
+    </tr>
+</template>
+
+<template id="micro-table-row-template">
+    <tr>
+        <td><input type="text" name="mt___IDX___test_name" style="min-width:180px;"></td>
+        <td><select name="mt___IDX___status" style="width:130px;"><option value="Required">Required</option><option value="Not Required">Not Required</option><option value="Completed">Completed</option></select></td>
+        <td><input type="text" name="mt___IDX___test_method" style="width:120px;"></td>
+        <td><input type="text" name="mt___IDX___positive_release" style="width:80px;" placeholder="Yes/No"></td>
+        <td><input type="text" name="mt___IDX___notes" style="min-width:140px;"></td>
+        <td><button type="button" data-remove-row class="btn btn-sm btn-danger" style="padding:2px 6px;">×</button></td>
+    </tr>
+</template>
+
+<template id="additives-table-row-template">
+    <tr>
+        <td><input type="text" name="add___IDX___legal_name" style="min-width:160px;"></td>
+        <td><input type="text" name="add___IDX___e_number" style="width:80px;"></td>
+        <td><input type="text" name="add___IDX___function" style="min-width:120px;"></td>
+        <td><select name="add___IDX___natural_artificial" style="width:120px;"><option value="">—</option><option value="Natural">Natural</option><option value="Artificial">Artificial</option><option value="Nature-identical">Nature-identical</option></select></td>
+        <td><input type="text" name="add___IDX___level_in_product" style="width:120px;"></td>
+        <td><button type="button" data-remove-row class="btn btn-sm btn-danger" style="padding:2px 6px;">×</button></td>
+    </tr>
+</template>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Quick-add micro test buttons
+document.querySelectorAll('.quick-add-micro').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+        var name = this.dataset.name;
+        var tbody = document.querySelector('#micro-table tbody');
+        var idx = tbody.querySelectorAll('tr').length;
+        var template = document.querySelector('#micro-table-row-template');
+        var html = template.innerHTML.replace(/__IDX__/g, idx);
+        var tr = document.createElement('tr');
+        tr.innerHTML = html;
+        tr.querySelector('input[name^="mt_"]').value = name;
+        tbody.appendChild(tr);
+    });
+});
+</script>
+{% endblock %}

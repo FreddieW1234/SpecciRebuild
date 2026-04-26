@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spec Sheet — {{ component.name }}</title>
+    {% if not is_pdf %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+    {% endif %}
+    <style>
+        /* ---- Spec sheet styles (embedded for PDF compatibility) ---- */
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif; font-size: 11px; color: #1a1a1a; background: #fff; }
+        .page { max-width: 210mm; margin: 0 auto; padding: 16mm 16mm 12mm; }
+
+        /* Header */
+        .doc-header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid #1a1d23; padding-bottom: 12px; margin-bottom: 14px; }
+        .doc-header-left h1 { font-size: 17px; font-weight: 800; color: #1a1d23; margin-bottom: 3px; }
+        .doc-header-left .code { font-family: monospace; font-size: 11px; color: #555; }
+        .doc-header-right { text-align: right; }
+        .logo-area { width: 110px; height: 50px; border: 1px dashed #ccc; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #999; margin-bottom: 6px; }
+        .company-name { font-size: 10px; font-weight: 700; color: #333; }
+
+        /* Meta block */
+        .doc-meta { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 4px 12px; margin-bottom: 14px; padding: 8px 10px; background: #f7f8f9; border: 1px solid #e2e6ea; border-radius: 4px; }
+        .doc-meta dt { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; color: #777; }
+        .doc-meta dd { font-size: 11px; color: #1a1a1a; font-weight: 500; }
+
+        /* Sections */
+        .section { margin-bottom: 12px; page-break-inside: avoid; }
+        .section-header { display: flex; align-items: center; gap: 8px; background: #1a1d23; color: #fff; padding: 5px 10px; border-radius: 3px; margin-bottom: 6px; }
+        .section-letter { font-size: 14px; font-weight: 900; line-height: 1; }
+        .section-title { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; }
+
+        /* Field table */
+        .field-table { width: 100%; border-collapse: collapse; }
+        .field-table td { padding: 4px 8px; border: 1px solid #e2e6ea; vertical-align: top; font-size: 11px; line-height: 1.4; }
+        .field-table .label { font-weight: 600; color: #555; width: 170px; background: #fafbfc; }
+        .field-table .value { color: #1a1a1a; }
+        .field-table .value.empty { color: #bbb; font-style: italic; }
+
+        /* Two-column field table */
+        .field-table-2col { width: 100%; border-collapse: collapse; }
+        .field-table-2col td { padding: 4px 8px; border: 1px solid #e2e6ea; vertical-align: top; font-size: 11px; }
+        .field-table-2col .label { font-weight: 600; color: #555; width: 120px; background: #fafbfc; }
+
+        /* Data tables */
+        .data-table { width: 100%; border-collapse: collapse; }
+        .data-table th { background: #f0f2f5; padding: 5px 8px; text-align: left; font-size: 10px; font-weight: 700; border: 1px solid #e2e6ea; text-transform: uppercase; letter-spacing: 0.3px; }
+        .data-table td { padding: 4px 8px; border: 1px solid #e2e6ea; font-size: 11px; vertical-align: top; }
+
+        /* Allergen table */
+        .allergen-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0; border: 1px solid #e2e6ea; border-radius: 3px; overflow: hidden; }
+        .allergen-cell { display: flex; align-items: center; justify-content: space-between; padding: 5px 10px; border-bottom: 1px solid #e2e6ea; border-right: 1px solid #e2e6ea; font-size: 11px; }
+        .allergen-cell:nth-child(even) { border-right: none; }
+        .allergen-name-col { font-weight: 500; }
+        .status-pill { padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 700; }
+        .status-contains { background: #fff5f5; color: #c92a2a; border: 1px solid #ffc9c9; }
+        .status-may { background: #fff3bf; color: #c17e00; border: 1px solid #ffe066; }
+        .status-free { background: #ebfbee; color: #2f9e44; border: 1px solid #b2f2bb; }
+        .status-ingredient { background: #e8ecfd; color: #3b5bdb; border: 1px solid #bac8ff; }
+        .status-notset { background: #f1f3f5; color: #868e96; border: 1px solid #dee2e6; }
+
+        /* Nutrition table */
+        .nutrition-table { width: 100%; border-collapse: collapse; }
+        .nutrition-table th { background: #1a1d23; color: #fff; padding: 5px 10px; text-align: left; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; }
+        .nutrition-table td { padding: 5px 10px; border-bottom: 1px solid #e2e6ea; font-size: 11px; }
+        .nutrition-table tr:last-child td { border-bottom: none; }
+        .nutrition-table .nutrient-name { font-weight: 500; }
+        .nutrition-table .nutrient-sub { padding-left: 16px; color: #555; }
+        .nutrition-table .nutrient-value { text-align: right; font-family: monospace; }
+
+        /* Footer */
+        .doc-footer { margin-top: 20px; padding-top: 8px; border-top: 1px solid #e2e6ea; display: flex; justify-content: space-between; font-size: 9px; color: #aaa; }
+
+        /* Signature block */
+        .sig-block { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; margin-top: 20px; padding-top: 16px; border-top: 1px solid #e2e6ea; }
+        .sig-line { border-top: 1px solid #666; padding-top: 4px; font-size: 9px; color: #666; margin-top: 28px; }
+
+        /* Print */
+        @page { size: A4; margin: 0; }
+        @media print { .no-print { display: none !important; } }
+    </style>
+</head>
+<body>
+{% if not is_pdf %}
+<!-- Preview toolbar -->
+<div class="no-print" style="background:#1a1d23; padding:10px 24px; display:flex; align-items:center; gap:12px; position:sticky; top:0; z-index:100;">
+    <a href="{{ url_for('specifications.index') }}" style="color:#9aa3b0; font-size:13px; text-decoration:none;">← Back to Specifications</a>
+    <span style="color:#5a6275; font-size:13px;">|</span>
+    <span style="color:#fff; font-size:13px; font-weight:600;">{{ component.name }} — Spec Sheet Preview</span>
+    <div style="margin-left:auto; display:flex; gap:8px;">
+        <a href="{{ url_for('specifications.edit', component_id=component.id) }}" style="background:#3b5bdb; color:#fff; padding:6px 14px; border-radius:5px; font-size:12px; text-decoration:none; font-weight:500;">Edit Spec Data</a>
+        <a href="{{ url_for('specifications.pdf', component_id=component.id) }}" style="background:#2f9e44; color:#fff; padding:6px 14px; border-radius:5px; font-size:12px; text-decoration:none; font-weight:500;">Download PDF</a>
+    </div>
+</div>
+{% endif %}
+
+<div class="page">
+
+    <!-- Document Header -->
+    <div class="doc-header">
+        <div class="doc-header-left">
+            <h1>{{ component.name }}</h1>
+            {% if component.code %}<div class="code">Product Code: {{ component.code }}</div>{% endif %}
+            <div class="code">Component Type: {{ component.component_type }}</div>
+        </div>
+        <div class="doc-header-right">
+            <div class="logo-area">Company Logo</div>
+            <div class="company-name">{{ company.get('name', '') }}</div>
+        </div>
+    </div>
+
+    <!-- Meta block -->
+    <dl class="doc-meta">
+        <dt>Spec Number</dt>
+        <dd>{{ spec.current_specification_number or '—' }}</dd>
+        <dt>Issue Date</dt>
+        <dd>{{ spec.current_specification_issued_date or '—' }}</dd>
+        <dt>Review Date</dt>
+        <dd>{{ spec.next_spec_review_date or '—' }}</dd>
+        <dt>Status</dt>
+        <dd>{{ component.status }}</dd>
+    </dl>
+
+    <!-- SECTION A — Component Identification -->
+    <div class="section">
+        <div class="section-header">
+            <span class="section-letter">A</span>
+            <span class="section-title">Component Identification</span>
+        </div>
+        <table class="field-table">
+            <tr><td class="label">Product Name</td><td class="value">{{ component.name }}</td><td class="label">Product Code</td><td class="value">{{ component.code or '—' }}</td></tr>
+            <tr><td class="label">Component Type</td><td class="value">{{ component.component_type }}</td><td class="label">Product Level</td><td class="value">{{ component.product_level }}</td></tr>
+            <tr><td class="label">Manufactured / Purchased</td><td class="value">{{ component.manufactured_purchased }}</td><td class="label">Status</td><td class="value">{{ component.status }}</td></tr>
+            <tr><td class="label">Description</td><td class="value" colspan="3">{{ component.description or '—' }}</td></tr>
+            {% if spec.countries_of_origin %}<tr><td class="label">Country of Origin</td><td class="value">{{ spec.countries_of_origin }}</td><td class="label">Country of Manufacture</td><td class="value">{{ spec.countries_of_manufacture or '—' }}</td></tr>{% endif %}
+            {% if spec.function_primary %}<tr><td class="label">Primary Function</td><td class="value" colspan="3">{{ spec.function_primary }}</td></tr>{% endif %}
+        </table>
+    </div>
+
+    <!-- SECTION B — Supplier Details -->
+    {% if suppliers %}
+    <div class="section">
+        <div class="section-header">
+            <span class="section-letter">B</span>
+            <span class="section-title">Supplier Details</span>
+        </div>
+        <table class="data-table">
+            <thead><tr><th>Supplier Name</th><th>Supplier Code</th><th>Relationship</th></tr></thead>
+            <tbody>
+                {% for s in suppliers %}
+                <tr><td>{{ s.supplier_name }}</td><td style="font-family:monospace;">{{ s.supplier_code }}</td><td>{{ s.relationship_type }}</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+
+    <!-- SECTION C — Constituents -->
+    {% if constituents %}
+    <div class="section">
+        <div class="section-header">
+            <span class="section-letter">C</span>
+            <span class="section-title">Constituent / Ingredient Breakdown</span>
+        </div>
+        <table class="data-table">
+            <thead>
+                <tr><th>Ingredient</th><th>BA Code</th><th>Level</th><th style="text-align:right;">%</th><th>Country of Origin</th><th>E Number</th><th>Label?</th></tr>
+            </thead>
+            <tbody>
+                {% for c in constituents %}
+                <tr>
+                    <td>{{ c.constituent_name }}</td>
+                    <td style="font-family:monospace; font-size:10px;">{{ c.constituent_ba_code or '—' }}</td>
+                    <td>{{ c.constituent_level or '—' }}</td>
+                    <td style="text-align:right; font-family:monospace;">{{ '%.2f'|format(c.composition_percent) if c.composition_percent else '—' }}</td>
+                    <td>{{ c.country_of_origin or '—' }}</td>
+                    <td>{{ c.e_number or '—' }}</td>
+                    <td style="text-align:center;">{{ 'Yes' if c.declare_on_label else 'No' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+
+    <!-- SECTION D — Sensory / Quality Characteristics -->
+    {% if spec.product_colour or spec.product_taste or spec.product_aroma or spec.product_texture or spec.product_appearance %}
+    <div class="section">
+        <div class="section-header">
+            <span class="section-letter">D</span>
+            <span class="section-title">Sensory &amp; Quality Characteristics</span>
+        </div>
+        <table class="field-table">
+            {% if spec.product_colour %}<tr><td class="label">Colour</td><td class="value" colspan="3">{{ spec.product_colour }}</td></tr>{% endif %}
+            {% if spec.product_taste %}<tr><td class="label">Taste</td><td class="value" colspan="3">{{ spec.product_taste }}</td></tr>{% endif %}
+            {% if spec.product_aroma %}<tr><td class="label">Aroma</td><td class="value" colspan="3">{{ spec.product_aroma }}</td></tr>{% endif %}
+            {% if spec.product_texture %}<tr><td class="label">Texture</td><td class="value" colspan="3">{{ spec.product_texture }}</td></tr>{% endif %}
+            {% if spec.product_appearance %}<tr><td class="label">Appearance</td><td class="value" colspan="3">{{ spec.product_appearance }}</td></tr>{% endif %}
+            {% if spec.product_defects %}<tr><td class="label">Defects / Tolerances</td><td class="value" colspan="3">{{ spec.product_defects }}</td></tr>{% endif %}
+        </table>
+    </div>
+    {% endif %}
+
+    <!-- SECTION I — Additives -->
+    {% if additives %}
+    <div class="section">
+        <div class="section-header">
+            <span class="section-letter">I</span>
+            <span class="section-title">Additives &amp; Processing Aids</span>
+        </div>
+        <table class="data-table">
+            <thead><tr><th>Legal Name</th><th>E Number</th><th>Function</th><th>Natural / Artificial</th><th>Level in Product</th></tr></thead>
+            <tbody>
+                {% for a in additives %}
+                <tr>
+                    <td>{{ a.legal_name or '—' }}</td>
+                    <td>{{ a.e_number or '—' }}</td>
+                    <td>{{ a.function or '—' }}</td>
+                    <td>{{ a.natural_artificial or '—' }}</td>
+                    <td>{{ a.level_in_product or '—' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+
+    <!-- SECTION K — Palm Oil -->
+    <div class="section">
+        <div class="section-header">
+            <span class="section-letter">K</span>
+            <span class="section-title">Palm Oil Status</span>
+        </div>
+        <table class="field-table">
+            <tr><td class="label">Contains Palm Oil</td><td class="value">{{ palm.contains_palm_oil or spec.palm_oil_status or '—' }}</td><td class="label">RSPO Certified</td><td class="value">{{ palm.rspo_certified or '—' }}</td></tr>
+            {% if palm.rspo_cert_number %}<tr><td class="label">RSPO Certificate No.</td><td class="value">{{ palm.rspo_cert_number }}</td><td class="label">RSPO Supply Chain</td><td class="value">{{ palm.rspo_supply_chain or '—' }}</td></tr>{% endif %}
+            {% if palm.compliance_statement %}<tr><td class="label">Compliance Statement</td><td class="value" colspan="3">{{ palm.compliance_statement }}</td></tr>{% endif %}
+        </table>
+    </div>
+
+    <!-- SECTION L — GMO -->
+    <div class="section">
+        <div class="section-header">
+            <span class="section-letter">L</span>
+            <span class="section-title">GMO Status</span>
+        </div>
+        <table class="field-table">
+            <tr><td class="label">GMO Status</td><td class="value" colspan="3">{{ spec.gmo_status or '—' }}</td></tr>
+            {% if spec.gmo_details %}<tr><td class="label">GMO Details</td><td class="value" colspan="3">{{ spec.gmo_details }}</td></tr>{% endif %}
+            {% if spec.gmo_certificate %}<tr><td class="label">GMO Certificate</td><td class="value" colspan="3">{{ spec.gmo_certificate }}</td></tr>{% endif %}
+        </table>
+    </div>
+
+    <!-- SECTION M — Allergens -->
+    <div class="section">
+        <div class="section-header">
+            <span class="section-letter">M</span>
+            <span class="section-title">Allergen Status (UK — 14 Regulated Allergens)</span>
+        </div>
+        <div class="allergen-grid">
+            {% for allergen in allergens %}
+            {% set a = allergen_map.get(allergen, {}) %}
+            {% set status = a.get('status', '') %}
+            <div class="allergen-cell">
+                <span class="allergen-name-col">{{ allergen }}</span>
+                {% if status == 'Contains' %}
+                    <span class="status-pill status-contains">Contains</span>
+                {% elif status == 'May Contain' %}
+                    <span class="status-pill status-may">May Contain</span>
+                {% elif status == 'Free From' %}
+                    <span class="status-pill status-free">Free From</span>
+                {% elif status == 'Ingredient Containing' %}
+                    <span class="status-pill status-ingredient">Ingredient</span>
+                {% else %}
+                    <span class="status-pill status-notset">Not Set</span>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- SECTION P — Nutritional Composition -->
+    <div class="section">
+        <div class="section-header">
+            <span class="section-letter">P</span>
+            <span class="section-title">Nutritional Composition (per 100g)</span>
+        </div>
+        <table class="nutrition-table">
+            <thead><tr><th style="width:60%;">Nutrient</th><th style="text-align:right;">Per 100g</th><th style="text-align:right; width:80px;">Unit</th></tr></thead>
+            <tbody>
+                {% set energy_kcal = spec.nutrition_energy_kcal %}
+                {% if energy_kcal is not none %}
+                <tr>
+                    <td class="nutrient-name">Energy</td>
+                    <td class="nutrient-value">{{ '%.0f'|format(energy_kcal * 4.184) }} kJ / {{ '%.0f'|format(energy_kcal) }}</td>
+                    <td class="nutrient-value">kJ / kcal</td>
+                </tr>
+                {% else %}
+                <tr><td class="nutrient-name">Energy</td><td class="nutrient-value" style="color:#bbb;">—</td><td></td></tr>
+                {% endif %}
+                {% for field in nutrition_fields if field.key != 'nutrition_energy_kcal' %}
+                {% set v = spec.get(field.key) %}
+                <tr>
+                    <td class="nutrient-name {% if field.key == 'nutrition_sugar' %}nutrient-sub{% endif %}">{{ field.label }}</td>
+                    <td class="nutrient-value">{{ '%.2f'|format(v)|float if v is not none else '—' }}</td>
+                    <td class="nutrient-value">{{ field.unit }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- SECTION Q — Chemical, Physical & Micro -->
+    {% if analytical or micro %}
+    <div class="section">
+        <div class="section-header">
+            <span class="section-letter">Q</span>
+            <span class="section-title">Chemical, Physical &amp; Microbiological Parameters</span>
+        </div>
+        {% if analytical %}
+        <p style="font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.4px; color:#555; margin-bottom:4px; margin-top:6px;">Analytical Parameters</p>
+        <table class="data-table">
+            <thead><tr><th>Parameter</th><th>Target</th><th>Acceptable Range</th><th>Typical</th><th>Method</th><th>Frequency</th></tr></thead>
+            <tbody>
+                {% for a in analytical %}
+                <tr><td>{{ a.parameter_name }}</td><td>{{ a.target_value }}</td><td>{{ a.acceptable_range }}</td><td>{{ a.typical_value or '—' }}</td><td>{{ a.method_of_analysis }}</td><td>{{ a.qc_frequency }}</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% endif %}
+        {% if micro %}
+        <p style="font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.4px; color:#555; margin-bottom:4px; margin-top:10px;">Microbiological Tests</p>
+        <table class="data-table">
+            <thead><tr><th>Test</th><th>Status</th><th>Method</th><th>Positive Release</th><th>Notes</th></tr></thead>
+            <tbody>
+                {% for m in micro %}
+                <tr><td>{{ m.test_name }}</td><td>{{ m.status }}</td><td>{{ m.test_method or '—' }}</td><td>{{ m.positive_release or '—' }}</td><td>{{ m.notes or '—' }}</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- SECTION V — Storage & Shelf Life -->
+    <div class="section">
+        <div class="section-header">
+            <span class="section-letter">V</span>
+            <span class="section-title">Storage Conditions &amp; Shelf Life</span>
+        </div>
+        <table class="field-table">
+            {% if storage.recommended_storage_temp %}
+            <tr><td class="label">Recommended Storage Temp</td><td class="value">{{ storage.recommended_storage_temp }} {{ storage.recommended_storage_temp_unit or '°C' }}</td>
+                <td class="label">Storage Area</td><td class="value">{{ storage.storage_area_type or '—' }}</td></tr>
+            {% endif %}
+            {% if storage.relative_humidity %}
+            <tr><td class="label">Relative Humidity</td><td class="value">{{ storage.relative_humidity }} {{ storage.humidity_unit or '% RH' }}</td>
+                <td class="label">Pest Controlled</td><td class="value">{{ storage.pest_controlled_storage or '—' }}</td></tr>
+            {% endif %}
+            {% if storage.shelf_life_from_manufacture_value %}
+            <tr><td class="label">Shelf Life from Manufacture</td><td class="value">{{ storage.shelf_life_from_manufacture_value }} {{ storage.shelf_life_from_manufacture_unit or '' }}</td>
+                <td class="label">Min Shelf Life on Delivery</td><td class="value">{{ (storage.min_shelf_life_on_delivery_value or '—') ~ ' ' ~ (storage.min_shelf_life_on_delivery_unit or '') }}</td></tr>
+            {% endif %}
+            {% if storage.stock_rotation_requirement %}
+            <tr><td class="label">Stock Rotation</td><td class="value" colspan="3">{{ storage.stock_rotation_requirement }}</td></tr>
+            {% endif %}
+            {% if storage.special_storage_instructions %}
+            <tr><td class="label">Special Instructions</td><td class="value" colspan="3" style="white-space:pre-wrap;">{{ storage.special_storage_instructions }}</td></tr>
+            {% endif %}
+        </table>
+    </div>
+
+    <!-- Certifications block -->
+    {% set certs = [] %}
+    {% if spec.certification_brc and spec.certification_brc not in ['No', 'Not Applicable'] %}{% set _ = certs.append('BRC/BRCGS: ' ~ spec.certification_brc) %}{% endif %}
+    {% if spec.certification_rspo and spec.certification_rspo not in ['No', 'Not Applicable'] %}{% set _ = certs.append('RSPO: ' ~ spec.certification_rspo) %}{% endif %}
+    {% if spec.certification_halal and spec.certification_halal not in ['No', 'Not Applicable'] %}{% set _ = certs.append('Halal: ' ~ spec.certification_halal) %}{% endif %}
+    {% if spec.certification_kosher and spec.certification_kosher not in ['No', 'Not Applicable'] %}{% set _ = certs.append('Kosher: ' ~ spec.certification_kosher) %}{% endif %}
+    {% if spec.certification_organic and spec.certification_organic not in ['No', 'Not Applicable'] %}{% set _ = certs.append('Organic: ' ~ spec.certification_organic) %}{% endif %}
+    {% if certs %}
+    <div class="section">
+        <div class="section-header">
+            <span class="section-letter">R</span>
+            <span class="section-title">Certifications</span>
+        </div>
+        <table class="field-table">
+            <tr><td class="label">Certifications Held</td><td class="value" colspan="3">{{ certs | join(' &nbsp;|&nbsp; ') | safe }}</td></tr>
+            {% if spec.certification_details %}<tr><td class="label">Details</td><td class="value" colspan="3">{{ spec.certification_details }}</td></tr>{% endif %}
+        </table>
+    </div>
+    {% endif %}
+
+    <!-- Signature / Approval block -->
+    <div class="sig-block">
+        <div>
+            <div class="sig-line">Prepared by</div>
+        </div>
+        <div>
+            <div class="sig-line">Approved by (Technical)</div>
+        </div>
+        <div>
+            <div class="sig-line">Date</div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="doc-footer">
+        <span>{{ company.get('name', '') }} &mdash; Confidential</span>
+        <span>Spec: {{ spec.current_specification_number or 'Draft' }} &mdash; Issue: {{ spec.current_specification_issued_date or '—' }}</span>
+    </div>
+
+</div>
+</body>
+</html>

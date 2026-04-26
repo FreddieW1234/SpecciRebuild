@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}Suppliers{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb">
+    <a href="{{ url_for('dashboard.index') }}">Dashboard</a>
+    <span class="breadcrumb-sep">/</span>
+    <span class="breadcrumb-current">Suppliers</span>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="page-header-left">
+        <h1 class="page-title">Suppliers</h1>
+        <p class="page-subtitle">{{ suppliers|length }} supplier{{ 's' if suppliers|length != 1 }}</p>
+    </div>
+    <div class="page-actions">
+        <a href="{{ url_for('suppliers.new') }}" class="btn btn-primary">+ New Supplier</a>
+    </div>
+</div>
+
+<div class="toolbar">
+    <form method="get" style="display:flex; gap:10px; flex-wrap:wrap; width:100%;">
+        <input type="text" name="q" value="{{ search }}" placeholder="Search by name or code…" class="search-input">
+        <select name="status" style="width:200px;">
+            <option value="">All statuses</option>
+            {% for s in approval_statuses %}
+            <option value="{{ s }}" {% if status_filter == s %}selected{% endif %}>{{ s|title }}</option>
+            {% endfor %}
+        </select>
+        <button type="submit" class="btn btn-secondary">Filter</button>
+        {% if search or status_filter %}
+        <a href="{{ url_for('suppliers.index') }}" class="btn btn-ghost">Clear</a>
+        {% endif %}
+    </form>
+</div>
+
+{% if suppliers %}
+<div class="table-wrapper">
+    <table>
+        <thead>
+            <tr>
+                <th>Code</th>
+                <th>Name</th>
+                <th>Type</th>
+                <th>Approval Status</th>
+                <th>Commercial Contact</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for s in suppliers %}
+            <tr>
+                <td><span style="font-family:monospace; font-size:12px;">{{ s.supplier_code }}</span></td>
+                <td><a href="{{ url_for('suppliers.detail', id=s.id) }}">{{ s.supplier_name }}</a></td>
+                <td>{{ s.supplier_type or '—' }}</td>
+                <td>
+                    {% set badge = {'approved': 'approved', 'not approved': 'not-approved', 'conditional': 'conditional', 'suspended': 'archived', 'delisted': 'archived'} %}
+                    <span class="badge badge-{{ badge.get(s.approval_status, 'draft') }}">{{ s.approval_status|title }}</span>
+                </td>
+                <td>
+                    {% if s.commercial_contact_name %}
+                        {{ s.commercial_contact_name }}
+                        {% if s.commercial_contact_email %}<br><small>{{ s.commercial_contact_email }}</small>{% endif %}
+                    {% else %}—{% endif %}
+                </td>
+                <td>
+                    <div class="table-actions">
+                        <a href="{{ url_for('suppliers.edit', id=s.id) }}" class="btn btn-sm btn-secondary">Edit</a>
+                        <form method="post" action="{{ url_for('suppliers.delete', id=s.id) }}" data-confirm="Delete supplier '{{ s.supplier_name }}'?">
+                            <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                        </form>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="card">
+    <div class="empty-state">
+        <div class="empty-state-icon">🏭</div>
+        <h3>No suppliers yet</h3>
+        <p>Add your first supplier to get started.</p>
+        <a href="{{ url_for('suppliers.new') }}" class="btn btn-primary">Add Supplier</a>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}Specifications{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb">
+    <a href="{{ url_for('dashboard.index') }}">Dashboard</a>
+    <span class="breadcrumb-sep">/</span>
+    <span class="breadcrumb-current">Specifications</span>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="page-header-left">
+        <h1 class="page-title">Specifications</h1>
+        <p class="page-subtitle">Generate and download technical spec sheets for any component</p>
+    </div>
+</div>
+
+{% if components %}
+<div class="table-wrapper">
+    <table>
+        <thead>
+            <tr>
+                <th>Code</th>
+                <th>Component Name</th>
+                <th>Type</th>
+                <th>Status</th>
+                <th>Spec Number</th>
+                <th>Next Review</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for c in components %}
+            <tr>
+                <td><span style="font-family:monospace; font-size:12px;">{{ c.code or '—' }}</span></td>
+                <td><a href="{{ url_for('components.detail', id=c.id) }}">{{ c.name }}</a></td>
+                <td>{{ c.component_type }}</td>
+                <td>
+                    {% set s = c.status | lower | replace(' ', '-') %}
+                    <span class="badge badge-{{ s }}">{{ c.status }}</span>
+                </td>
+                <td style="font-family:monospace; font-size:12px;">{{ c.current_specification_number or '—' }}</td>
+                <td style="font-size:12px; color:var(--color-text-muted);">{{ c.next_spec_review_date or '—' }}</td>
+                <td>
+                    <div class="table-actions">
+                        <a href="{{ url_for('specifications.preview', component_id=c.id) }}" class="btn btn-sm btn-primary">Preview</a>
+                        <a href="{{ url_for('specifications.pdf', component_id=c.id) }}" class="btn btn-sm btn-secondary">PDF</a>
+                        <a href="{{ url_for('specifications.edit', component_id=c.id) }}" class="btn btn-sm btn-ghost">Edit Spec</a>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="card">
+    <div class="empty-state">
+        <div class="empty-state-icon">📄</div>
+        <h3>No components yet</h3>
+        <p>Add components first, then generate spec sheets here.</p>
+        <a href="{{ url_for('components.new') }}" class="btn btn-primary">New Component</a>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

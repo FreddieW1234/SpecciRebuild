@@ -1,0 +1,220 @@
+{% extends "base.html" %}
+{% block title %}{{ supplier.supplier_name }}{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb">
+    <a href="{{ url_for('dashboard.index') }}">Dashboard</a>
+    <span class="breadcrumb-sep">/</span>
+    <a href="{{ url_for('suppliers.index') }}">Suppliers</a>
+    <span class="breadcrumb-sep">/</span>
+    <span class="breadcrumb-current">{{ supplier.supplier_name }}</span>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="page-header-left">
+        <div style="font-family:monospace; font-size:12px; color:var(--color-text-muted); margin-bottom:4px;">{{ supplier.supplier_code }}</div>
+        <h1 class="page-title">{{ supplier.supplier_name }}</h1>
+        {% set badge = {'approved': 'approved', 'not approved': 'not-approved', 'conditional': 'conditional', 'suspended': 'archived', 'delisted': 'archived'} %}
+        <span class="badge badge-{{ badge.get(supplier.approval_status, 'draft') }}" style="margin-top:6px;">{{ supplier.approval_status|title }}</span>
+    </div>
+    <div class="page-actions">
+        <a href="{{ url_for('suppliers.edit', id=supplier.id) }}" class="btn btn-primary">Edit</a>
+        <form method="post" action="{{ url_for('suppliers.delete', id=supplier.id) }}"
+              data-confirm="Permanently delete '{{ supplier.supplier_name }}'? This cannot be undone.">
+            <button type="submit" class="btn btn-danger">Delete</button>
+        </form>
+    </div>
+</div>
+
+<div class="tabs">
+    <div class="tab-nav">
+        <a class="tab-btn active" data-tab="overview" href="#overview">Overview</a>
+        <a class="tab-btn" data-tab="contacts" href="#contacts">Contacts</a>
+        <a class="tab-btn" data-tab="approval" href="#approval">Approval</a>
+        <a class="tab-btn" data-tab="certificates" href="#certificates">Certificates ({{ certs|length }})</a>
+    </div>
+
+    <div id="overview" class="tab-panel active" style="margin-top:20px;">
+        <div class="card">
+            <div class="card-header"><span class="card-title">Supplier Details</span></div>
+            <div class="card-body">
+                <dl style="display:grid; grid-template-columns: 200px 1fr; gap:8px 16px; font-size:13px;">
+                    <dt style="font-weight:600; color:var(--color-text-muted);">Code</dt>
+                    <dd style="font-family:monospace;">{{ supplier.supplier_code }}</dd>
+                    <dt style="font-weight:600; color:var(--color-text-muted);">Name</dt>
+                    <dd>{{ supplier.supplier_name }}</dd>
+                    <dt style="font-weight:600; color:var(--color-text-muted);">Type</dt>
+                    <dd>{{ supplier.supplier_type or '—' }}</dd>
+                    <dt style="font-weight:600; color:var(--color-text-muted);">Address</dt>
+                    <dd>{{ supplier.address or '—' }}</dd>
+                    <dt style="font-weight:600; color:var(--color-text-muted);">Manufacturer/Packer</dt>
+                    <dd>{{ supplier.last_manufacturer_or_packer_name or '—' }}</dd>
+                    <dt style="font-weight:600; color:var(--color-text-muted);">Notes</dt>
+                    <dd style="white-space:pre-wrap;">{{ supplier.notes or '—' }}</dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+
+    <div id="contacts" class="tab-panel" style="margin-top:20px;">
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
+            {% set contacts = [
+                ('commercial', 'Commercial Contact'),
+                ('technical', 'Technical Contact'),
+                ('emergency', 'Emergency Contact'),
+                ('accounts', 'Accounts Contact'),
+            ] %}
+            {% for prefix, title in contacts %}
+            <div class="card">
+                <div class="card-header"><span class="card-title">{{ title }}</span></div>
+                <div class="card-body">
+                    <dl style="display:grid; grid-template-columns: 80px 1fr; gap:6px 12px; font-size:13px;">
+                        <dt style="font-weight:600; color:var(--color-text-muted);">Name</dt>
+                        <dd>{{ supplier.get(prefix + '_contact_name') or '—' }}</dd>
+                        <dt style="font-weight:600; color:var(--color-text-muted);">Role</dt>
+                        <dd>{{ supplier.get(prefix + '_contact_role') or '—' }}</dd>
+                        <dt style="font-weight:600; color:var(--color-text-muted);">Email</dt>
+                        <dd>{% if supplier.get(prefix + '_contact_email') %}<a href="mailto:{{ supplier.get(prefix + '_contact_email') }}">{{ supplier.get(prefix + '_contact_email') }}</a>{% else %}—{% endif %}</dd>
+                        <dt style="font-weight:600; color:var(--color-text-muted);">Phone</dt>
+                        <dd>{{ supplier.get(prefix + '_contact_landline') or '—' }}</dd>
+                        <dt style="font-weight:600; color:var(--color-text-muted);">Mobile</dt>
+                        <dd>{{ supplier.get(prefix + '_contact_mobile') or '—' }}</dd>
+                    </dl>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div id="approval" class="tab-panel" style="margin-top:20px;">
+        <div class="card">
+            <div class="card-header"><span class="card-title">Approval &amp; Traceability</span></div>
+            <div class="card-body">
+                <dl style="display:grid; grid-template-columns: 240px 1fr; gap:8px 16px; font-size:13px;">
+                    <dt style="font-weight:600; color:var(--color-text-muted);">Approval Status</dt>
+                    <dd>{{ supplier.approval_status|title }}</dd>
+                    <dt style="font-weight:600; color:var(--color-text-muted);">Approval Method</dt>
+                    <dd>{{ supplier.approval_method or '—' }}</dd>
+                    <dt style="font-weight:600; color:var(--color-text-muted);">Approval Scope</dt>
+                    <dd>{{ supplier.approval_scope or '—' }}</dd>
+                    <dt style="font-weight:600; color:var(--color-text-muted);">Approval Date</dt>
+                    <dd>{{ supplier.approval_date or '—' }}</dd>
+                    <dt style="font-weight:600; color:var(--color-text-muted);">Review Date</dt>
+                    <dd>{{ supplier.review_date or '—' }}</dd>
+                    <dt style="font-weight:600; color:var(--color-text-muted);">Traceability Confirmed</dt>
+                    <dd>{{ 'Yes' if supplier.traceability_confirmed else 'No' }}</dd>
+                    <dt style="font-weight:600; color:var(--color-text-muted);">Traceability Description</dt>
+                    <dd style="white-space:pre-wrap;">{{ supplier.traceability_system_description or '—' }}</dd>
+                    <dt style="font-weight:600; color:var(--color-text-muted);">Clause Reference</dt>
+                    <dd>{{ supplier.clause_reference or '—' }}</dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+
+    <div id="certificates" class="tab-panel" style="margin-top:20px;">
+        <div class="card" style="margin-bottom:20px;">
+            <div class="card-header">
+                <span class="card-title">Certificates &amp; Forms</span>
+            </div>
+            <div class="card-body" style="padding:0;">
+                {% if certs %}
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Type</th>
+                            <th>Reference</th>
+                            <th>Issue Date</th>
+                            <th>Expiry Date</th>
+                            <th>Status</th>
+                            <th>Contact</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for c in certs %}
+                        <tr>
+                            <td>{{ c.type }}</td>
+                            <td>{{ c.reference_or_number or '—' }}</td>
+                            <td>{{ c.issue_date or '—' }}</td>
+                            <td>{{ c.expiry_date or '—' }}</td>
+                            <td>{{ c.status or '—' }}</td>
+                            <td>{{ c.contact_person or '—' }}</td>
+                            <td>
+                                <form method="post" action="{{ url_for('suppliers.delete_cert', id=supplier.id, cid=c.id) }}"
+                                      data-confirm="Remove this certificate?">
+                                    <button type="submit" class="btn btn-sm btn-danger">Remove</button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="empty-state" style="padding:32px;">
+                    <p>No certificates added yet.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header"><span class="card-title">Add Certificate</span></div>
+            <div class="card-body">
+                <form method="post" action="{{ url_for('suppliers.add_cert', id=supplier.id) }}">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Certificate Type *</label>
+                            <select name="type" required>
+                                <option value="">Select type…</option>
+                                {% for t in cert_types %}
+                                <option value="{{ t }}">{{ t }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Reference / Number</label>
+                            <input type="text" name="reference_or_number">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Issue Date</label>
+                            <input type="date" name="issue_date">
+                        </div>
+                        <div class="form-group">
+                            <label>Expiry Date</label>
+                            <input type="date" name="expiry_date">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Contact Person</label>
+                            <input type="text" name="contact_person">
+                        </div>
+                        <div class="form-group">
+                            <label>Contact Email</label>
+                            <input type="email" name="contact_email">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Status</label>
+                            <input type="text" name="status" placeholder="e.g. Valid, Expired, Pending">
+                        </div>
+                        <div class="form-group" style="display:flex; align-items:flex-end;">
+                            <div class="checkbox-group">
+                                <input type="checkbox" name="send_reminder" id="send_reminder">
+                                <label for="send_reminder">Send expiry reminder</label>
+                            </div>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Add Certificate</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
