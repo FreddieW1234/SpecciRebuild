@@ -50,7 +50,7 @@
                 <th>Code</th>
                 <th>Name</th>
                 <th>Type</th>
-                <th>Level</th>
+                <th>Company</th>
                 <th>Status</th>
                 <th>Updated</th>
                 <th>Actions</th>
@@ -62,7 +62,16 @@
                 <td><span style="font-family:monospace; font-size:12px;">{{ c.code or '—' }}</span></td>
                 <td><a href="{{ url_for('components.detail', id=c.id) }}">{{ c.name }}</a></td>
                 <td>{{ c.component_type }}</td>
-                <td style="font-size:12px; color:var(--color-text-muted);">{{ c.product_level }}</td>
+                <td>
+                    {% set ca = c.company_assignment or 'Both' %}
+                    {% if ca == 'Michton' %}
+                    <span class="badge badge-info">Michton</span>
+                    {% elif ca == 'Bakeart' %}
+                    <span class="badge badge-active">Bakeart</span>
+                    {% else %}
+                    <span class="badge badge-draft">Both</span>
+                    {% endif %}
+                </td>
                 <td>
                     {% set s = c.status | lower | replace(' ', '-') %}
                     <span class="badge badge-{{ s }}">{{ c.status }}</span>

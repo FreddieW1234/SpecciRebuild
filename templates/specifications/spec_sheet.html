@@ -18,7 +18,8 @@
         .doc-header-left h1 { font-size: 17px; font-weight: 800; color: #1a1d23; margin-bottom: 3px; }
         .doc-header-left .code { font-family: monospace; font-size: 11px; color: #555; }
         .doc-header-right { text-align: right; }
-        .logo-area { width: 110px; height: 50px; border: 1px dashed #ccc; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #999; margin-bottom: 6px; }
+        .logo-area { width: 130px; margin-bottom: 6px; }
+        .logo-area img { max-width: 130px; max-height: 55px; object-fit: contain; display: block; }
         .company-name { font-size: 10px; font-weight: 700; color: #333; }
 
         /* Meta block */
@@ -106,7 +107,13 @@
             <div class="code">Component Type: {{ component.component_type }}</div>
         </div>
         <div class="doc-header-right">
-            <div class="logo-area">Company Logo</div>
+            <div class="logo-area">
+                {% if company and company.get('id') == 2 %}
+                <img src="https://www.bakeart.co.uk/2015/images/template_images/bakeart_footer_logo.png" alt="Bakeart (UK) Ltd">
+                {% else %}
+                <img src="{{ url_for('static', filename='img/logo.png') }}" alt="{{ company.get('name', '') }}" onerror="this.style.display='none'">
+                {% endif %}
+            </div>
             <div class="company-name">{{ company.get('name', '') }}</div>
         </div>
     </div>

@@ -1,4 +1,4 @@
-from flask import render_template, request, redirect, url_for, flash, g
+from flask import render_template, request, redirect, url_for, flash, g, session
 from modules.components import bp
 from modules.components.models import (
     get_all_components, get_component, create_component, update_component, delete_component,
@@ -14,11 +14,25 @@ from modules.components.models import (
 )
 from core.decorators import login_required
 from core.reference_data import (
-    COMPONENT_TYPES, PRODUCT_LEVELS, COMPONENT_STATUSES, ALLERGENS, ALLERGEN_STATUSES,
+    COMPONENT_TYPES, COMPONENT_TYPES_FORM, PRODUCT_LEVELS, COMPONENT_STATUSES,
+    ALLERGENS, ALLERGEN_STATUSES,
     GMO_STATUS_OPTIONS, PALM_OIL_STATUS_OPTIONS, CERTIFICATION_OPTIONS,
     PACKAGING_LEVELS, COUNTRIES, NUTRITION_FIELDS, MICRO_TEST_NAMES,
+    COMPANY_ASSIGNMENT_OPTIONS,
 )
-from core.db import query_all
+from core.db import query_all, query_one
+
+
+def _active_company_short():
+    """Return 'Michton', 'Bakeart', or None based on active session company."""
+    company_id = session.get('active_company_id', 1)
+    company = query_one('SELECT name FROM company_profile WHERE id = %s', (company_id,))
+    name = (company.get('name') or '') if company else ''
+    if 'Michton' in name:
+        return 'Michton'
+    if 'Bakeart' in name:
+        return 'Bakeart'
+    return None
 
 
 def _parse_table_rows(form, prefix, fields):
@@ -50,14 +64,16 @@ def index():
     search = request.args.get('q', '').strip()
     type_filter = request.args.get('type', '').strip()
     status_filter = request.args.get('status', '').strip()
+    company_short = _active_company_short()
     components = get_all_components(
         search=search or None,
         type_filter=type_filter or None,
         status_filter=status_filter or None,
+        company_short=company_short,
     )
     return render_template('components/index.html', components=components,
                            search=search, type_filter=type_filter, status_filter=status_filter,
-                           component_types=COMPONENT_TYPES, statuses=COMPONENT_STATUSES)
+                           component_types=COMPONENT_TYPES_FORM, statuses=COMPONENT_STATUSES)
 
 
 @bp.route('/new', methods=['GET', 'POST'])
@@ -68,14 +84,17 @@ def new():
         if not data.get('name') or not data.get('component_type'):
             flash('Name and type are required.', 'error')
             return render_template('components/form.html', component=data, is_new=True,
-                                   component_types=COMPONENT_TYPES, product_levels=PRODUCT_LEVELS,
-                                   statuses=COMPONENT_STATUSES)
+                                   component_types=COMPONENT_TYPES_FORM,
+                                   product_levels=PRODUCT_LEVELS,
+                                   statuses=COMPONENT_STATUSES,
+                                   company_assignment_options=COMPANY_ASSIGNMENT_OPTIONS)
         cid = create_component(data)
         flash('Component created.', 'success')
         return redirect(url_for('components.detail', id=cid))
     return render_template('components/form.html', component={}, is_new=True,
-                           component_types=COMPONENT_TYPES, product_levels=PRODUCT_LEVELS,
-                           statuses=COMPONENT_STATUSES)
+                           component_types=COMPONENT_TYPES_FORM, product_levels=PRODUCT_LEVELS,
+                           statuses=COMPONENT_STATUSES,
+                           company_assignment_options=COMPANY_ASSIGNMENT_OPTIONS)
 
 
 @bp.route('/<int:id>')
@@ -122,14 +141,17 @@ def edit(id):
         if not data.get('name') or not data.get('component_type'):
             flash('Name and type are required.', 'error')
             return render_template('components/form.html', component=data, is_new=False,
-                                   component_types=COMPONENT_TYPES, product_levels=PRODUCT_LEVELS,
-                                   statuses=COMPONENT_STATUSES)
+                                   component_types=COMPONENT_TYPES_FORM,
+                                   product_levels=PRODUCT_LEVELS,
+                                   statuses=COMPONENT_STATUSES,
+                                   company_assignment_options=COMPANY_ASSIGNMENT_OPTIONS)
         update_component(id, data)
         flash('Component updated.', 'success')
         return redirect(url_for('components.detail', id=id))
     return render_template('components/form.html', component=component, is_new=False,
-                           component_types=COMPONENT_TYPES, product_levels=PRODUCT_LEVELS,
-                           statuses=COMPONENT_STATUSES)
+                           component_types=COMPONENT_TYPES_FORM, product_levels=PRODUCT_LEVELS,
+                           statuses=COMPONENT_STATUSES,
+                           company_assignment_options=COMPANY_ASSIGNMENT_OPTIONS)
 
 
 @bp.route('/<int:id>/delete', methods=['POST'])

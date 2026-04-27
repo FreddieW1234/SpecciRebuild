@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block title %}Finished Products{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb">
+    <a href="{{ url_for('dashboard.index') }}">Dashboard</a>
+    <span class="breadcrumb-sep">/</span>
+    <span class="breadcrumb-current">Finished Products</span>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="page-header-left">
+        <h1 class="page-title">Finished Products</h1>
+        <p class="page-subtitle">
+            {{ active_company.name }} &mdash; {{ products|length }} product{{ 's' if products|length != 1 }}
+        </p>
+    </div>
+    <div class="page-actions">
+        <a href="{{ url_for('finished_products.bin_view') }}" class="btn btn-ghost btn-sm">🗑 Bin</a>
+        <a href="{{ url_for('finished_products.new') }}" class="btn btn-primary">+ New Product</a>
+    </div>
+</div>
+
+<div class="toolbar">
+    <form method="get" style="display:flex; gap:10px; width:100%;">
+        <input type="text" name="q" value="{{ search }}" placeholder="Search by name or BA code…" class="search-input">
+        <button type="submit" class="btn btn-secondary">Search</button>
+        {% if search %}<a href="{{ url_for('finished_products.index') }}" class="btn btn-ghost">Clear</a>{% endif %}
+    </form>
+</div>
+
+{% if products %}
+<div class="table-wrapper">
+    <table>
+        <thead>
+            <tr>
+                <th>BA Code</th>
+                <th>Product Name</th>
+                <th>Legal Name</th>
+                <th>Manufacturer</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for p in products %}
+            <tr>
+                <td><span style="font-family:monospace; font-size:12px;">{{ p.ba_code or '—' }}</span></td>
+                <td><a href="{{ url_for('finished_products.detail', id=p.id) }}">{{ p.name }}</a></td>
+                <td>{{ p.legal_name or '—' }}</td>
+                <td>{{ p.manufacturer or '—' }}</td>
+                <td>
+                    {% set s = (p.status or 'draft') | lower | replace(' ', '-') %}
+                    <span class="badge badge-{{ s }}">{{ p.status or 'Draft' }}</span>
+                </td>
+                <td>
+                    <div class="table-actions">
+                        <a href="{{ url_for('finished_products.detail', id=p.id) }}" class="btn btn-sm btn-secondary">View</a>
+                        <form method="post" action="{{ url_for('finished_products.delete', id=p.id) }}"
+                              data-confirm="Move '{{ p.name }}' to bin?">
+                            <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                        </form>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="card">
+    <div class="empty-state">
+        <div class="empty-state-icon">🍫</div>
+        <h3>No finished products yet</h3>
+        <p>Add the first product for {{ active_company.name }}.</p>
+        <a href="{{ url_for('finished_products.new') }}" class="btn btn-primary">+ New Product</a>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

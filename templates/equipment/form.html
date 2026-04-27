@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}{{ 'New Tool Head' if is_new else 'Edit ' + eq.tool_number }}{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb">
+    <a href="{{ url_for('dashboard.index') }}">Dashboard</a>
+    <span class="breadcrumb-sep">/</span>
+    <a href="{{ url_for('equipment.index') }}">Equipment</a>
+    <span class="breadcrumb-sep">/</span>
+    <span class="breadcrumb-current">{{ 'New' if is_new else 'Edit' }}</span>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="page-header-left">
+        <h1 class="page-title">{{ 'New Tool Head' if is_new else 'Edit Tool Head' }}</h1>
+    </div>
+    <div class="page-actions">
+        <a href="{{ url_for('equipment.index') }}" class="btn btn-ghost">Cancel</a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <form method="post">
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Tool Number *</label>
+                    <input type="text" name="tool_number" value="{{ eq.tool_number or '' }}" required autofocus
+                           placeholder="e.g. S001, T001, H042">
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <input type="text" name="description" value="{{ eq.description or '' }}"
+                           placeholder="e.g. Heart, Mini Heart, Flower">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Size</label>
+                    <input type="text" name="size_raw" value="{{ eq.size_raw or '' }}"
+                           placeholder="e.g. 6 X 6, 4.5 diameter">
+                </div>
+                <div class="form-group">
+                    <label>Supplier / Owner</label>
+                    <input type="text" name="supplier" value="{{ eq.supplier or '' }}">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Reserved For (Product / Customer)</label>
+                    <input type="text" name="unique_for" value="{{ eq.unique_for or '' }}"
+                           placeholder="Leave blank if not reserved">
+                </div>
+                <div class="form-group">
+                    <label>Reservation Expires</label>
+                    <input type="date" name="unique_until" value="{{ eq.unique_until or '' }}">
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="checkbox-group">
+                    <input type="checkbox" name="is_active" id="is_active"
+                           {{ 'checked' if eq.is_active or is_new }}>
+                    <label for="is_active">Tool head is active and available</label>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Notes</label>
+                <textarea name="notes" rows="3">{{ eq.notes or '' }}</textarea>
+            </div>
+            <div style="display:flex; gap:10px; margin-top:8px;">
+                <button type="submit" class="btn btn-primary">{{ 'Create Tool Head' if is_new else 'Save Changes' }}</button>
+                <a href="{{ url_for('equipment.index') }}" class="btn btn-ghost">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

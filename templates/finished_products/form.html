@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}{{ 'New Finished Product' if is_new else 'Edit ' + fp.name }}{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb">
+    <a href="{{ url_for('dashboard.index') }}">Dashboard</a>
+    <span class="breadcrumb-sep">/</span>
+    <a href="{{ url_for('finished_products.index') }}">Finished Products</a>
+    <span class="breadcrumb-sep">/</span>
+    <span class="breadcrumb-current">{{ 'New' if is_new else 'Edit' }}</span>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="page-header-left">
+        <h1 class="page-title">{{ 'New Finished Product' if is_new else 'Edit Product' }}</h1>
+        <p class="page-subtitle">{{ active_company.name }}</p>
+    </div>
+    <div class="page-actions">
+        <a href="{{ url_for('finished_products.index') }}" class="btn btn-ghost">Cancel</a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <form method="post">
+            <div class="form-row">
+                <div class="form-group">
+                    <label>BA Code</label>
+                    <input type="text" name="ba_code" value="{{ fp.ba_code or '' }}" placeholder="e.g. FP-001">
+                </div>
+                <div class="form-group">
+                    <label>Product Name *</label>
+                    <input type="text" name="name" value="{{ fp.name or '' }}" required autofocus>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Legal Name</label>
+                    <input type="text" name="legal_name" value="{{ fp.legal_name or '' }}" placeholder="As it appears on packaging">
+                </div>
+                <div class="form-group">
+                    <label>Manufacturer</label>
+                    <select name="manufacturer">
+                        <option value="">Select…</option>
+                        {% for m in manufacturers %}
+                        <option value="{{ m }}" {{ 'selected' if fp.manufacturer == m }}>{{ m }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Status</label>
+                    <select name="status">
+                        {% for s in statuses %}
+                        <option value="{{ s }}" {{ 'selected' if fp.status == s }}>{{ s }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Net Weight</label>
+                    <div style="display:flex; gap:8px;">
+                        <input type="number" name="net_weight_grams" step="0.01" min="0"
+                               value="{{ fp.net_weight_grams or '' }}" placeholder="e.g. 100"
+                               style="flex:1;">
+                        <select name="net_weight_unit" style="width:72px;">
+                            <option value="g" {{ 'selected' if (fp.net_weight_unit or 'g') == 'g' }}>g</option>
+                            <option value="kg" {{ 'selected' if fp.net_weight_unit == 'kg' }}>kg</option>
+                        </select>
+                    </div>
+                    <div class="form-hint">Used to calculate ingredient percentages in the recipe.</div>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Description</label>
+                <textarea name="description" rows="3">{{ fp.description or '' }}</textarea>
+            </div>
+            <div style="margin-top:8px; display:flex; gap:10px;">
+                <button type="submit" class="btn btn-primary">{{ 'Create Product' if is_new else 'Save Changes' }}</button>
+                <a href="{{ url_for('finished_products.index') }}" class="btn btn-ghost">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

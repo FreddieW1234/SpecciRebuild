@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}{{ tmpl.name }}{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb">
+    <a href="{{ url_for('dashboard.index') }}">Dashboard</a>
+    <span class="breadcrumb-sep">/</span>
+    <a href="{{ url_for('product_templates.index') }}">Product Templates</a>
+    <span class="breadcrumb-sep">/</span>
+    <span class="breadcrumb-current">{{ tmpl.name }}</span>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="page-header-left">
+        <div class="component-code">{{ tmpl.code or 'No code' }}</div>
+        <h1 class="page-title">{{ tmpl.name }}</h1>
+        <span class="badge {% if tmpl.is_active %}badge-active{% else %}badge-draft{% endif %}" style="margin-top:6px;">
+            {{ 'Active' if tmpl.is_active else 'Inactive' }}
+        </span>
+    </div>
+    <div class="page-actions">
+        <a href="{{ url_for('product_templates.edit', id=tmpl.id) }}" class="btn btn-primary">Edit</a>
+    </div>
+</div>
+
+<div class="card" style="margin-bottom:16px;">
+    <div class="card-header"><span class="card-title">Details</span></div>
+    <div class="card-body">
+        <dl style="display:grid; grid-template-columns:200px 1fr; gap:8px 16px; font-size:13px;">
+            <dt style="font-weight:600; color:var(--color-text-muted);">Code</dt>
+            <dd style="font-family:monospace;">{{ tmpl.code or '—' }}</dd>
+            <dt style="font-weight:600; color:var(--color-text-muted);">Name</dt>
+            <dd>{{ tmpl.name }}</dd>
+            <dt style="font-weight:600; color:var(--color-text-muted);">Description</dt>
+            <dd style="white-space:pre-wrap;">{{ tmpl.description or '—' }}</dd>
+            <dt style="font-weight:600; color:var(--color-text-muted);">Status</dt>
+            <dd>{{ 'Active' if tmpl.is_active else 'Inactive' }}</dd>
+        </dl>
+    </div>
+</div>
+
+{% set spec_fields = [
+    ('v_storage_conditions', 'Storage Conditions'),
+    ('w_shelf_life_format', 'Shelf Life Format'),
+    ('free_from_gluten', 'Gluten Free'),
+    ('free_from_dairy', 'Dairy Free'),
+    ('free_from_nuts', 'Nut Free'),
+    ('free_from_soya', 'Soya Free'),
+    ('free_from_eggs', 'Egg Free'),
+    ('suitable_vegetarian', 'Vegetarian'),
+    ('suitable_vegan', 'Vegan'),
+    ('suitable_halal', 'Halal'),
+    ('suitable_kosher', 'Kosher'),
+] %}
+
+{% set has_spec = namespace(found=false) %}
+{% for key, _ in spec_fields %}{% if tmpl.get(key) %}{% set has_spec.found = true %}{% endif %}{% endfor %}
+
+{% if has_spec.found %}
+<div class="card">
+    <div class="card-header"><span class="card-title">Template Defaults</span></div>
+    <div class="card-body">
+        <dl style="display:grid; grid-template-columns:200px 1fr; gap:8px 16px; font-size:13px;">
+            {% for key, label in spec_fields %}
+            {% if tmpl.get(key) %}
+            <dt style="font-weight:600; color:var(--color-text-muted);">{{ label }}</dt>
+            <dd>{{ tmpl.get(key) }}</dd>
+            {% endif %}
+            {% endfor %}
+        </dl>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

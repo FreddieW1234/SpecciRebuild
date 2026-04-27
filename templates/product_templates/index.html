@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}Product Templates{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb">
+    <a href="{{ url_for('dashboard.index') }}">Dashboard</a>
+    <span class="breadcrumb-sep">/</span>
+    <span class="breadcrumb-current">Product Templates</span>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="page-header-left">
+        <h1 class="page-title">Product Templates</h1>
+        <p class="page-subtitle">{{ templates|length }} template{{ 's' if templates|length != 1 }}</p>
+    </div>
+    <div class="page-actions">
+        <a href="{{ url_for('product_templates.new') }}" class="btn btn-primary">+ New Template</a>
+    </div>
+</div>
+
+{% if templates %}
+<div class="table-wrapper">
+    <table>
+        <thead>
+            <tr>
+                <th>Code</th>
+                <th>Name</th>
+                <th>Description</th>
+                <th>Active</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for t in templates %}
+            <tr>
+                <td><span style="font-family:monospace; font-size:12px;">{{ t.code or '—' }}</span></td>
+                <td><a href="{{ url_for('product_templates.detail', id=t.id) }}">{{ t.name }}</a></td>
+                <td>{{ t.description or '—' }}</td>
+                <td>
+                    {% if t.is_active %}
+                    <span class="badge badge-active">Active</span>
+                    {% else %}
+                    <span class="badge badge-draft">Inactive</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <div class="table-actions">
+                        <a href="{{ url_for('product_templates.edit', id=t.id) }}" class="btn btn-sm btn-secondary">Edit</a>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="card">
+    <div class="empty-state">
+        <div class="empty-state-icon">📋</div>
+        <h3>No templates yet</h3>
+        <p>Create product templates to standardise spec fields across products.</p>
+        <a href="{{ url_for('product_templates.new') }}" class="btn btn-primary">+ New Template</a>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

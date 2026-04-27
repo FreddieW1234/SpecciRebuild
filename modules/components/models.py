@@ -3,9 +3,12 @@ from core.db import query_one, query_all, execute, execute_returning
 
 # ---- Components ----
 
-def get_all_components(search=None, type_filter=None, status_filter=None):
-    sql = 'SELECT * FROM components WHERE 1=1'
+def get_all_components(search=None, type_filter=None, status_filter=None, company_short=None):
+    sql = "SELECT * FROM components WHERE component_type != 'Finished Product'"
     params = []
+    if company_short:
+        sql += " AND (company_assignment = 'Both' OR company_assignment = %s)"
+        params.append(company_short)
     if search:
         sql += ' AND (name ILIKE %s OR code ILIKE %s)'
         params += [f'%{search}%', f'%{search}%']
@@ -25,8 +28,10 @@ def get_component(component_id):
 
 def create_component(data):
     return execute_returning("""
-        INSERT INTO components (code, name, component_type, product_level, manufactured_purchased, description, status)
-        VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING id
+        INSERT INTO components
+            (code, name, component_type, product_level, manufactured_purchased,
+             description, status, company_assignment)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s) RETURNING id
     """, (
         data.get('code') or None,
         data.get('name'),
@@ -35,13 +40,15 @@ def create_component(data):
         data.get('manufactured_purchased', 'Manufactured'),
         data.get('description'),
         data.get('status', 'Draft'),
+        data.get('company_assignment', 'Both'),
     ))
 
 
 def update_component(component_id, data):
     execute("""
         UPDATE components SET code=%s, name=%s, component_type=%s, product_level=%s,
-            manufactured_purchased=%s, description=%s, status=%s, updated_at=NOW()
+            manufactured_purchased=%s, description=%s, status=%s,
+            company_assignment=%s, updated_at=NOW()
         WHERE id = %s
     """, (
         data.get('code') or None,
@@ -51,6 +58,7 @@ def update_component(component_id, data):
         data.get('manufactured_purchased', 'Manufactured'),
         data.get('description'),
         data.get('status', 'Draft'),
+        data.get('company_assignment', 'Both'),
         component_id,
     ))
 

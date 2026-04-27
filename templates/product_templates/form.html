@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% block title %}{{ 'New Template' if is_new else 'Edit ' + tmpl.name }}{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb">
+    <a href="{{ url_for('dashboard.index') }}">Dashboard</a>
+    <span class="breadcrumb-sep">/</span>
+    <a href="{{ url_for('product_templates.index') }}">Product Templates</a>
+    <span class="breadcrumb-sep">/</span>
+    <span class="breadcrumb-current">{{ 'New' if is_new else 'Edit' }}</span>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="page-header-left">
+        <h1 class="page-title">{{ 'New Product Template' if is_new else 'Edit Template' }}</h1>
+    </div>
+    <div class="page-actions">
+        <a href="{{ url_for('product_templates.index') }}" class="btn btn-ghost">Cancel</a>
+    </div>
+</div>
+
+<form method="post">
+    <div class="card" style="margin-bottom:16px;">
+        <div class="card-header"><span class="card-title">Basic Details</span></div>
+        <div class="card-body">
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Code</label>
+                    <input type="text" name="code" value="{{ tmpl.code or '' }}" placeholder="e.g. TPL-001">
+                </div>
+                <div class="form-group">
+                    <label>Template Name *</label>
+                    <input type="text" name="name" value="{{ tmpl.name or '' }}" required autofocus>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Description</label>
+                <textarea name="description" rows="3">{{ tmpl.description or '' }}</textarea>
+            </div>
+            {% if not is_new %}
+            <div class="form-group">
+                <div class="checkbox-group">
+                    <input type="checkbox" name="is_active" id="is_active" {{ 'checked' if tmpl.is_active }}>
+                    <label for="is_active">Template is active</label>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if not is_new %}
+    <div class="card" style="margin-bottom:16px;">
+        <div class="card-header"><span class="card-title">Storage &amp; Shelf Life</span></div>
+        <div class="card-body">
+            <div class="form-group">
+                <label>Storage Conditions</label>
+                <textarea name="v_storage_conditions" rows="3">{{ tmpl.get('v_storage_conditions', '') or '' }}</textarea>
+            </div>
+            <div class="form-group">
+                <label>Shelf Life Format</label>
+                <input type="text" name="w_shelf_life_format" value="{{ tmpl.get('w_shelf_life_format', '') or '' }}" placeholder="e.g. Best Before End">
+            </div>
+        </div>
+    </div>
+
+    <div class="card" style="margin-bottom:16px;">
+        <div class="card-header"><span class="card-title">Free From / Suitability Defaults</span></div>
+        <div class="card-body">
+            <div class="form-row">
+                {% for field, label in [
+                    ('free_from_gluten','Gluten Free'),('free_from_dairy','Dairy Free'),
+                    ('free_from_nuts','Nut Free'),('free_from_soya','Soya Free'),('free_from_eggs','Egg Free')
+                ] %}
+                <div class="form-group">
+                    <label>{{ label }}</label>
+                    <select name="{{ field }}">
+                        <option value="">—</option>
+                        <option value="Yes" {{ 'selected' if tmpl.get(field) == 'Yes' }}>Yes</option>
+                        <option value="No" {{ 'selected' if tmpl.get(field) == 'No' }}>No</option>
+                    </select>
+                </div>
+                {% endfor %}
+            </div>
+            <div class="form-row">
+                {% for field, label in [
+                    ('suitable_vegetarian','Vegetarian'),('suitable_vegan','Vegan'),
+                    ('suitable_halal','Halal'),('suitable_kosher','Kosher')
+                ] %}
+                <div class="form-group">
+                    <label>{{ label }}</label>
+                    <select name="{{ field }}">
+                        <option value="">—</option>
+                        <option value="Yes" {{ 'selected' if tmpl.get(field) == 'Yes' }}>Yes</option>
+                        <option value="No" {{ 'selected' if tmpl.get(field) == 'No' }}>No</option>
+                        <option value="Certified" {{ 'selected' if tmpl.get(field) == 'Certified' }}>Certified</option>
+                    </select>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <div style="display:flex; gap:10px;">
+        <button type="submit" class="btn btn-primary">{{ 'Create Template' if is_new else 'Save Template' }}</button>
+        <a href="{{ url_for('product_templates.index') }}" class="btn btn-ghost">Cancel</a>
+    </div>
+</form>
+{% endblock %}

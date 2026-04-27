@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block title %}Packaging Components{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb">
+    <a href="{{ url_for('dashboard.index') }}">Dashboard</a>
+    <span class="breadcrumb-sep">/</span>
+    <span class="breadcrumb-current">Packaging</span>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="page-header-left">
+        <h1 class="page-title">Packaging Components</h1>
+        <p class="page-subtitle">{{ items|length }} component{{ 's' if items|length != 1 }}</p>
+    </div>
+    <div class="page-actions">
+        <a href="{{ url_for('packaging.new') }}" class="btn btn-primary">+ New Packaging</a>
+    </div>
+</div>
+
+<div class="toolbar">
+    <form method="get" style="display:flex; gap:10px; width:100%;">
+        <input type="text" name="q" value="{{ search }}" placeholder="Search by description or BA code…" class="search-input">
+        <button type="submit" class="btn btn-secondary">Search</button>
+        {% if search %}<a href="{{ url_for('packaging.index') }}" class="btn btn-ghost">Clear</a>{% endif %}
+    </form>
+</div>
+
+{% if items %}
+<div class="table-wrapper">
+    <table>
+        <thead>
+            <tr>
+                <th>BA Code</th>
+                <th>Description</th>
+                <th>Type</th>
+                <th>Material</th>
+                <th>Status</th>
+                <th>Food Contact</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for p in items %}
+            <tr>
+                <td><span style="font-family:monospace; font-size:12px;">{{ p.ba_code or '—' }}</span></td>
+                <td><a href="{{ url_for('packaging.detail', id=p.id) }}">{{ p.internal_description }}</a></td>
+                <td>{{ p.packaging_type or '—' }}</td>
+                <td>{{ p.material_category or '—' }}</td>
+                <td>
+                    {% set s = (p.status or 'draft') | lower | replace(' ', '-') %}
+                    <span class="badge badge-{{ s }}">{{ p.status or 'Draft' }}</span>
+                </td>
+                <td>
+                    {% if p.food_contact_approved is not none %}
+                        {% if p.food_contact_approved %}<span class="badge badge-active">Yes</span>{% else %}<span class="badge badge-draft">No</span>{% endif %}
+                    {% else %}—{% endif %}
+                </td>
+                <td>
+                    <div class="table-actions">
+                        <a href="{{ url_for('packaging.edit', id=p.id) }}" class="btn btn-sm btn-secondary">Edit</a>
+                        <form method="post" action="{{ url_for('packaging.delete', id=p.id) }}"
+                              data-confirm="Delete '{{ p.internal_description }}'?">
+                            <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                        </form>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="card">
+    <div class="empty-state">
+        <div class="empty-state-icon">📦</div>
+        <h3>No packaging components yet</h3>
+        <p>Add your first packaging component to get started.</p>
+        <a href="{{ url_for('packaging.new') }}" class="btn btn-primary">+ New Packaging</a>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

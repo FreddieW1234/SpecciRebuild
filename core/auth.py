@@ -1,6 +1,6 @@
 import bcrypt
 from flask import Blueprint, session, redirect, url_for, request, flash, render_template, g
-from core.db import query_one, execute, execute_returning
+from core.db import query_one, query_all, execute, execute_returning
 
 bp = Blueprint('auth', __name__)
 
@@ -30,6 +30,20 @@ def get_current_user():
 
 def get_user_by_id(user_id):
     return query_one('SELECT * FROM users WHERE id = %s AND is_active = TRUE', (user_id,))
+
+
+def get_active_company():
+    """Return the active company profile dict from the session, defaulting to id=1."""
+    company_id = session.get('active_company_id', 1)
+    company = query_one('SELECT * FROM company_profile WHERE id = %s', (company_id,))
+    if not company:
+        company = query_one('SELECT * FROM company_profile ORDER BY id LIMIT 1')
+    return company
+
+
+def get_all_companies():
+    """Return all companies for the switcher dropdown."""
+    return query_all('SELECT id, name FROM company_profile ORDER BY id')
 
 
 def app_has_registered_users():

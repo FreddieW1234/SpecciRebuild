@@ -75,6 +75,20 @@
                     </select>
                 </div>
             </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Company</label>
+                    <select name="company_assignment">
+                        {% for opt in company_assignment_options %}
+                        <option value="{{ opt }}"
+                            {{ 'selected' if (component.company_assignment or 'Both') == opt }}>
+                            {% if opt == 'Both' %}Both companies{% elif opt == 'Michton' %}Michton only{% else %}Bakeart only{% endif %}
+                        </option>
+                        {% endfor %}
+                    </select>
+                    <div class="form-hint">Controls which company's component list this appears in.</div>
+                </div>
+            </div>
             <div class="form-group">
                 <label>Description</label>
                 <textarea name="description" rows="3">{{ component.description or '' }}</textarea>

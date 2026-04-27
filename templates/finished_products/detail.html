@@ -1,0 +1,670 @@
+{% extends "base.html" %}
+{% block title %}{{ fp.name }}{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb">
+    <a href="{{ url_for('dashboard.index') }}">Dashboard</a>
+    <span class="breadcrumb-sep">/</span>
+    <a href="{{ url_for('finished_products.index') }}">Finished Products</a>
+    <span class="breadcrumb-sep">/</span>
+    <span class="breadcrumb-current">{{ fp.name }}</span>
+</div>
+{% endblock %}
+
+{% block content %}
+
+{% if fp.has_circular_ref %}
+<div class="alert alert-error" style="margin-bottom:16px;">
+    ⚠ <strong>Circular reference detected in recipe.</strong>
+    {% if fp.circular_ref_detail %} {{ fp.circular_ref_detail }}{% endif %}
+    The exploded recipe may be incomplete.
+</div>
+{% endif %}
+
+<div class="page-header">
+    <div class="page-header-left">
+        <div class="component-code">{{ fp.ba_code or 'No BA code' }} &middot; {{ active_company.name }}</div>
+        <h1 class="page-title">{{ fp.name }}</h1>
+        <div style="display:flex; align-items:center; gap:10px; margin-top:6px;">
+            {% set s = (fp.status or 'draft') | lower | replace(' ', '-') %}
+            <span class="badge badge-{{ s }}">{{ fp.status or 'Draft' }}</span>
+            {% if fp.manufacturer %}<span style="font-size:12px; color:var(--color-text-muted);">{{ fp.manufacturer }}</span>{% endif %}
+            {% if fp.net_weight_grams %}
+            <span style="font-size:12px; color:var(--color-text-muted);">
+                Net weight: <strong>{{ fp.net_weight_grams }}{{ fp.net_weight_unit or 'g' }}</strong>
+            </span>
+            {% endif %}
+        </div>
+    </div>
+    <div class="page-actions">
+        <form method="post" action="{{ url_for('finished_products.delete', id=fp.id) }}"
+              data-confirm="Move '{{ fp.name }}' to bin?">
+            <button type="submit" class="btn btn-danger">Delete</button>
+        </form>
+    </div>
+</div>
+
+<div class="tabs">
+    <div class="tab-nav">
+        <a class="tab-btn active" data-tab="overview" href="#overview">Overview</a>
+        <a class="tab-btn" data-tab="recipe" href="#recipe">Recipe ({{ recipe|length }})</a>
+        <a class="tab-btn" data-tab="sensory" href="#sensory">Sensory</a>
+        <a class="tab-btn" data-tab="suitability" href="#suitability">Suitability</a>
+        <a class="tab-btn" data-tab="equipment" href="#equipment">Equipment ({{ linked_eq|length }})</a>
+        <a class="tab-btn" data-tab="allergens" href="#allergens">Allergens</a>
+    </div>
+
+    {# ===== OVERVIEW ===== #}
+    <div id="overview" class="tab-panel active" style="margin-top:20px;">
+        <div class="card">
+            <div class="card-header"><span class="card-title">Product Details</span></div>
+            <div class="card-body">
+                <form method="post" action="{{ url_for('finished_products.edit', id=fp.id) }}">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>BA Code</label>
+                            <input type="text" name="ba_code" value="{{ fp.ba_code or '' }}">
+                        </div>
+                        <div class="form-group">
+                            <label>Product Name *</label>
+                            <input type="text" name="name" value="{{ fp.name or '' }}" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Legal Name</label>
+                            <input type="text" name="legal_name" value="{{ fp.legal_name or '' }}">
+                        </div>
+                        <div class="form-group">
+                            <label>Manufacturer</label>
+                            <select name="manufacturer">
+                                <option value="">Select…</option>
+                                {% for m in manufacturers %}
+                                <option value="{{ m }}" {{ 'selected' if fp.manufacturer == m }}>{{ m }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Status</label>
+                            <select name="status">
+                                {% for s in statuses %}
+                                <option value="{{ s }}" {{ 'selected' if fp.status == s }}>{{ s }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Net Weight</label>
+                            <div style="display:flex; gap:8px;">
+                                <input type="number" name="net_weight_grams" step="0.01" min="0"
+                                       value="{{ fp.net_weight_grams or '' }}" placeholder="e.g. 100"
+                                       style="flex:1;">
+                                <select name="net_weight_unit" style="width:72px;">
+                                    <option value="g" {{ 'selected' if (fp.net_weight_unit or 'g') == 'g' }}>g</option>
+                                    <option value="kg" {{ 'selected' if fp.net_weight_unit == 'kg' }}>kg</option>
+                                </select>
+                            </div>
+                            <div class="form-hint">Used to calculate recipe percentages.</div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Default Extrusion Tool</label>
+                        <select name="selected_extrusion_tool_id">
+                            <option value="">None</option>
+                            {% for eq in all_equipment %}
+                            <option value="{{ eq.id }}" {{ 'selected' if fp.selected_extrusion_tool_id == eq.id }}>
+                                {{ eq.tool_number }} — {{ eq.description }}{% if eq.size_raw %} ({{ eq.size_raw }}){% endif %}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Description</label>
+                        <textarea name="description" rows="3">{{ fp.description or '' }}</textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Image URL</label>
+                        <input type="url" name="image_url" value="{{ fp.image_url or '' }}" placeholder="https://…">
+                    </div>
+                    {% if fp.image_url %}
+                    <div style="margin-bottom:12px;">
+                        <img src="{{ fp.image_url }}" alt="{{ fp.name }}"
+                             style="max-height:140px; border-radius:6px; border:1px solid var(--color-border);">
+                    </div>
+                    {% endif %}
+                    <button type="submit" class="btn btn-primary">Save Overview</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    {# ===== RECIPE ===== #}
+    <div id="recipe" class="tab-panel" style="margin-top:20px;">
+
+        {# Recipe sub-tabs #}
+        <div class="recipe-subtabs" style="display:flex; gap:4px; margin-bottom:16px; border-bottom:1px solid var(--color-border); padding-bottom:0;">
+            <button type="button" class="recipe-subtab-btn active" data-subtab="direct"
+                    style="padding:8px 16px; background:none; border:none; border-bottom:2px solid var(--color-primary); font-size:13px; font-weight:600; color:var(--color-primary); cursor:pointer;">
+                Direct Recipe
+            </button>
+            <button type="button" class="recipe-subtab-btn" data-subtab="exploded"
+                    style="padding:8px 16px; background:none; border:none; border-bottom:2px solid transparent; font-size:13px; font-weight:500; color:var(--color-text-muted); cursor:pointer;">
+                Exploded Recipe
+            </button>
+        </div>
+
+        {# Direct Recipe panel #}
+        <div class="recipe-subpanel" id="subtab-direct">
+            <div class="card" style="margin-bottom:20px;">
+                <div class="card-header"><span class="card-title">Direct Ingredients</span>
+                    {% if net_weight > 0 %}
+                    <span style="font-size:12px; color:var(--color-text-muted); margin-left:8px;">
+                        Net weight: {{ fp.net_weight_grams }}{{ fp.net_weight_unit or 'g' }}
+                    </span>
+                    {% endif %}
+                </div>
+                <div class="card-body" style="padding:0;">
+                    {% if recipe %}
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Ingredient</th>
+                                <th>Code</th>
+                                <th>Type</th>
+                                <th>Grams / Unit</th>
+                                <th>% Net Wt</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in recipe %}
+                            <tr>
+                                <td>{{ item.component_name or item.item_id }}</td>
+                                <td><span style="font-family:monospace; font-size:12px;">{{ item.component_code or '—' }}</span></td>
+                                <td>
+                                    {% if item.item_type == 'FinishedProduct' %}
+                                    <span class="badge badge-info" style="font-size:10px;">Finished Product</span>
+                                    {% else %}
+                                    <span class="badge badge-draft" style="font-size:10px;">Component</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ item.grams_per_unit or '—' }}</td>
+                                <td>{{ item.percent ~ '%' if item.percent is not none else '—' }}</td>
+                                <td>
+                                    <form method="post"
+                                          action="{{ url_for('finished_products.delete_recipe', id=fp.id, item_id=item.id) }}"
+                                          data-confirm="Remove this recipe item?">
+                                        <button type="submit" class="btn btn-sm btn-danger">Remove</button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% else %}
+                    <div class="empty-state" style="padding:32px;">
+                        <p>No recipe items yet. Add ingredients below.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            {# Add ingredient #}
+            <div class="card">
+                <div class="card-header"><span class="card-title">Add Ingredient</span></div>
+                <div class="card-body">
+                    <form method="post" action="{{ url_for('finished_products.add_recipe', id=fp.id) }}">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Search ingredient</label>
+                                <input type="text" id="ingSearch" placeholder="Type to filter…" autocomplete="off">
+                                <select name="ingredient_id" id="ingSelect" required style="margin-top:6px;">
+                                    <option value="">Select ingredient…</option>
+                                    <optgroup label="Components">
+                                        {% for c in all_components %}
+                                        <option value="{{ c.id }}" data-type="Component">
+                                            {{ c.name }}{% if c.code %} ({{ c.code }}){% endif %}
+                                        </option>
+                                        {% endfor %}
+                                    </optgroup>
+                                    {% if all_fps_for_recipe %}
+                                    <optgroup label="Finished Products">
+                                        {% for fp_item in all_fps_for_recipe %}
+                                        <option value="{{ fp_item.id }}" data-type="FinishedProduct">
+                                            {{ fp_item.name }}{% if fp_item.ba_code %} ({{ fp_item.ba_code }}){% endif %}
+                                        </option>
+                                        {% endfor %}
+                                    </optgroup>
+                                    {% endif %}
+                                </select>
+                                <input type="hidden" name="item_type" id="ingType" value="Component">
+                            </div>
+                            <div class="form-group">
+                                <label>Grams per Unit</label>
+                                <input type="number" name="grams_per_unit" step="0.001" min="0"
+                                       placeholder="e.g. 12.5">
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Add to Recipe</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        {# Exploded Recipe panel #}
+        <div class="recipe-subpanel" id="subtab-exploded" style="display:none;">
+            {% if fp.has_circular_ref %}
+            <div class="alert alert-error" style="margin-bottom:16px;">
+                ⚠ <strong>Circular reference:</strong> {{ fp.circular_ref_detail }}
+                The explosion below may be incomplete.
+            </div>
+            {% endif %}
+
+            <div class="card" style="margin-bottom:16px;">
+                <div class="card-header">
+                    <span class="card-title">Full Bill of Materials</span>
+                    <div style="display:flex; align-items:center; gap:12px; margin-left:auto;">
+                        {% if explosion_cache %}
+                        <span style="font-size:11px; color:var(--color-text-muted);">
+                            Calculated
+                            {% if explosion_cache.get('calculated_at') %}
+                                {{ explosion_cache['calculated_at'].strftime('%d %b %Y %H:%M') }}
+                            {% else %}—{% endif %}
+                        </span>
+                        {% endif %}
+                        <form method="post" action="{{ url_for('finished_products.recalculate_explosion', id=fp.id) }}">
+                            <button type="submit" class="btn btn-sm btn-secondary">↻ Recalculate</button>
+                        </form>
+                    </div>
+                </div>
+                <div class="card-body" style="padding:0;">
+                    {% if explosion_rows %}
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Raw Material</th>
+                                <th>BA Code</th>
+                                <th>Source Path</th>
+                                <th style="text-align:right;">Grams</th>
+                                <th style="text-align:right;">% Net Wt</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in explosion_rows %}
+                            <tr>
+                                <td style="padding-left:{{ (row.level or 0) * 16 + 12 }}px;">
+                                    {{ row.name or '—' }}
+                                </td>
+                                <td><span style="font-family:monospace; font-size:11px;">{{ row.ba_code or '—' }}</span></td>
+                                <td style="font-size:11px; color:var(--color-text-muted); max-width:280px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"
+                                    title="{{ row.path or '' }}">
+                                    {{ row.path or '—' }}
+                                </td>
+                                <td style="text-align:right; font-variant-numeric:tabular-nums;">
+                                    {{ '%.3f'|format(row.grams) }}
+                                </td>
+                                <td style="text-align:right; font-variant-numeric:tabular-nums;">
+                                    {% if row.percent is not none %}{{ row.percent }}%{% else %}—{% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot>
+                            <tr style="font-weight:600; border-top:2px solid var(--color-border);">
+                                <td colspan="3">Total</td>
+                                <td style="text-align:right;">{{ '%.3f'|format(total_explosion_grams) }}</td>
+                                <td style="text-align:right;">
+                                    {% if net_weight > 0 %}
+                                    {{ (total_explosion_grams / net_weight * 100)|round(2) }}%
+                                    {% else %}—{% endif %}
+                                </td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                    {% else %}
+                    <div class="empty-state" style="padding:32px;">
+                        {% if recipe %}
+                        <p>No explosion data yet. Click <strong>Recalculate</strong> to generate the full BOM.</p>
+                        {% else %}
+                        <p>Add recipe items first, then recalculate to see the full breakdown.</p>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# ===== SENSORY ===== #}
+    <div id="sensory" class="tab-panel" style="margin-top:20px;">
+        <div class="card">
+            <div class="card-header"><span class="card-title">Sensory &amp; Quality Characteristics</span></div>
+            <div class="card-body">
+                <form method="post" action="{{ url_for('finished_products.save_sensory', id=fp.id) }}">
+                    <div class="form-group">
+                        <label>Product Description</label>
+                        <textarea name="d_description" rows="3">{{ fp.d_description or '' }}</textarea>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Colour</label>
+                            <input type="text" name="d_colour" value="{{ fp.d_colour or '' }}">
+                        </div>
+                        <div class="form-group">
+                            <label>Taste</label>
+                            <input type="text" name="d_taste" value="{{ fp.d_taste or '' }}">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Aroma</label>
+                            <input type="text" name="d_aroma" value="{{ fp.d_aroma or '' }}">
+                        </div>
+                        <div class="form-group">
+                            <label>Texture</label>
+                            <input type="text" name="d_texture" value="{{ fp.d_texture or '' }}">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Appearance</label>
+                            <input type="text" name="d_appearance" value="{{ fp.d_appearance or '' }}">
+                        </div>
+                        <div class="form-group">
+                            <label>Defects / Tolerances</label>
+                            <input type="text" name="d_defects" value="{{ fp.d_defects or '' }}">
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Save Sensory</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    {# ===== SUITABILITY ===== #}
+    <div id="suitability" class="tab-panel" style="margin-top:20px;">
+        <div class="card">
+            <div class="card-header"><span class="card-title">Suitability Information</span></div>
+            <div class="card-body">
+                <form method="post" action="{{ url_for('finished_products.save_suitability', id=fp.id) }}">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Suitable for Vegetarians?</label>
+                            <select name="suitable_vegetarian">
+                                <option value="">—</option>
+                                <option value="Yes" {{ 'selected' if suitability.get('suitable_vegetarian') == 'Yes' }}>Yes</option>
+                                <option value="No" {{ 'selected' if suitability.get('suitable_vegetarian') == 'No' }}>No</option>
+                                <option value="Not assessed" {{ 'selected' if suitability.get('suitable_vegetarian') == 'Not assessed' }}>Not assessed</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Suitable for Vegans?</label>
+                            <select name="suitable_vegan">
+                                <option value="">—</option>
+                                <option value="Yes" {{ 'selected' if suitability.get('suitable_vegan') == 'Yes' }}>Yes</option>
+                                <option value="No" {{ 'selected' if suitability.get('suitable_vegan') == 'No' }}>No</option>
+                                <option value="Not assessed" {{ 'selected' if suitability.get('suitable_vegan') == 'Not assessed' }}>Not assessed</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Halal?</label>
+                            <select name="suitable_halal">
+                                <option value="">—</option>
+                                <option value="Yes" {{ 'selected' if suitability.get('suitable_halal') == 'Yes' }}>Yes</option>
+                                <option value="No" {{ 'selected' if suitability.get('suitable_halal') == 'No' }}>No</option>
+                                <option value="Certified" {{ 'selected' if suitability.get('suitable_halal') == 'Certified' }}>Certified</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Kosher?</label>
+                            <select name="suitable_kosher">
+                                <option value="">—</option>
+                                <option value="Yes" {{ 'selected' if suitability.get('suitable_kosher') == 'Yes' }}>Yes</option>
+                                <option value="No" {{ 'selected' if suitability.get('suitable_kosher') == 'No' }}>No</option>
+                                <option value="Certified" {{ 'selected' if suitability.get('suitable_kosher') == 'Certified' }}>Certified</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Gluten Free?</label>
+                            <select name="free_from_gluten">
+                                <option value="">—</option>
+                                <option value="Yes" {{ 'selected' if suitability.get('free_from_gluten') == 'Yes' }}>Yes</option>
+                                <option value="No" {{ 'selected' if suitability.get('free_from_gluten') == 'No' }}>No</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Dairy Free?</label>
+                            <select name="free_from_dairy">
+                                <option value="">—</option>
+                                <option value="Yes" {{ 'selected' if suitability.get('free_from_dairy') == 'Yes' }}>Yes</option>
+                                <option value="No" {{ 'selected' if suitability.get('free_from_dairy') == 'No' }}>No</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Additional Suitability Notes</label>
+                        <textarea name="suitability_notes" rows="3">{{ suitability.get('suitability_notes', '') }}</textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Save Suitability</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    {# ===== EQUIPMENT ===== #}
+    <div id="equipment" class="tab-panel" style="margin-top:20px;">
+        <div class="card" style="margin-bottom:20px;">
+            <div class="card-header"><span class="card-title">Linked Tool Heads</span></div>
+            <div class="card-body" style="padding:0;">
+                {% if linked_eq %}
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Tool Number</th>
+                            <th>Description</th>
+                            <th>Size</th>
+                            <th>Supplier</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for eq in linked_eq %}
+                        <tr>
+                            <td><span style="font-family:monospace;">{{ eq.tool_number }}</span></td>
+                            <td>{{ eq.description }}</td>
+                            <td>{{ eq.size_raw or '—' }}</td>
+                            <td>{{ eq.supplier or '—' }}</td>
+                            <td>
+                                <form method="post"
+                                      action="{{ url_for('finished_products.remove_equipment', id=fp.id, eq_id=eq.id) }}"
+                                      data-confirm="Remove this tool head link?">
+                                    <button type="submit" class="btn btn-sm btn-danger">Remove</button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="empty-state" style="padding:32px;">
+                    <p>No tool heads linked. Add one below.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header"><span class="card-title">Link Tool Head</span></div>
+            <div class="card-body">
+                <form method="post" action="{{ url_for('finished_products.add_equipment', id=fp.id) }}">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Tool Head *</label>
+                            <select name="equipment_id" required>
+                                <option value="">Select tool head…</option>
+                                {% for eq in all_equipment %}
+                                <option value="{{ eq.id }}">{{ eq.tool_number }} — {{ eq.description }}{% if eq.size_raw %} ({{ eq.size_raw }}){% endif %}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Link Tool Head</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    {# ===== ALLERGENS ===== #}
+    <div id="allergens" class="tab-panel" style="margin-top:20px;">
+        <div class="card" style="margin-bottom:16px;">
+            <div class="card-header">
+                <span class="card-title">Allergen Status</span>
+                <div style="margin-left:auto; display:flex; gap:10px; align-items:center;">
+                    <span style="font-size:11px; color:var(--color-text-muted);">
+                        Auto-calculated from recipe explosion. Manual override takes precedence on labels.
+                    </span>
+                    <form method="post" action="{{ url_for('finished_products.recalculate_explosion', id=fp.id) }}">
+                        <button type="submit" class="btn btn-sm btn-secondary">↻ Recalculate from recipe</button>
+                    </form>
+                </div>
+            </div>
+            <div class="card-body" style="padding:0;">
+                <form method="post" action="{{ url_for('finished_products.save_allergens', id=fp.id) }}">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Allergen</th>
+                                <th>Auto-calculated</th>
+                                <th>Manual Override</th>
+                                <th>Notes</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for allergen in allergens %}
+                            {% set auto_status = allergen_summary.get(allergen, '') %}
+                            {% set override_row = allergen_overrides.get(allergen, {}) %}
+                            <tr>
+                                <td>{{ allergen }}</td>
+                                <td>
+                                    {% if auto_status == 'Contains' %}
+                                    <span class="badge badge-danger" style="font-size:11px;">Contains</span>
+                                    {% elif auto_status == 'May Contain' %}
+                                    <span class="badge badge-warning" style="font-size:11px; background:#fff3cd; color:#856404;">May Contain</span>
+                                    {% elif auto_status == 'Free From' %}
+                                    <span class="badge badge-active" style="font-size:11px;">Free From</span>
+                                    {% else %}
+                                    <span style="font-size:11px; color:var(--color-text-muted);">Not calculated</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <select name="manual_{{ allergen }}" style="width:160px; font-size:12px;">
+                                        <option value="">— Use auto —</option>
+                                        <option value="Contains" {{ 'selected' if override_row.get('manual_status') == 'Contains' }}>Contains</option>
+                                        <option value="May Contain" {{ 'selected' if override_row.get('manual_status') == 'May Contain' }}>May Contain</option>
+                                        <option value="Free From" {{ 'selected' if override_row.get('manual_status') == 'Free From' }}>Free From</option>
+                                        <option value="Ingredient Containing" {{ 'selected' if override_row.get('manual_status') == 'Ingredient Containing' }}>Ingredient Containing</option>
+                                    </select>
+                                </td>
+                                <td>
+                                    <input type="text" name="notes_{{ allergen }}"
+                                           value="{{ override_row.get('notes', '') or '' }}"
+                                           placeholder="Notes…"
+                                           style="font-size:12px; width:200px;">
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    <div style="padding:16px;">
+                        <button type="submit" class="btn btn-primary">Save Allergen Overrides</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+    /* ---- Recipe sub-tabs ---- */
+    var subtabBtns = document.querySelectorAll('.recipe-subtab-btn');
+    var subpanels  = document.querySelectorAll('.recipe-subpanel');
+
+    subtabBtns.forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var target = this.dataset.subtab;
+
+            subtabBtns.forEach(function (b) {
+                b.style.borderBottomColor = 'transparent';
+                b.style.color = 'var(--color-text-muted)';
+                b.style.fontWeight = '500';
+                b.classList.remove('active');
+            });
+            subpanels.forEach(function (p) { p.style.display = 'none'; });
+
+            this.style.borderBottomColor = 'var(--color-primary)';
+            this.style.color = 'var(--color-primary)';
+            this.style.fontWeight = '600';
+            this.classList.add('active');
+
+            var panel = document.getElementById('subtab-' + target);
+            if (panel) panel.style.display = '';
+        });
+    });
+
+    /* ---- Ingredient search + type detection ---- */
+    var searchEl = document.getElementById('ingSearch');
+    var selectEl = document.getElementById('ingSelect');
+    var typeEl   = document.getElementById('ingType');
+    if (!searchEl || !selectEl) return;
+
+    // Snapshot all option groups
+    var groups = [];
+    selectEl.querySelectorAll('optgroup').forEach(function (grp) {
+        var opts = [];
+        grp.querySelectorAll('option').forEach(function (o) {
+            opts.push({ value: o.value, text: o.text.trim(), type: o.dataset.type || 'Component' });
+        });
+        groups.push({ label: grp.label, opts: opts });
+    });
+
+    function rebuild(q) {
+        q = q.toLowerCase();
+        var prev = selectEl.value;
+        selectEl.innerHTML = '<option value="">Select ingredient…</option>';
+        groups.forEach(function (grp) {
+            var matching = q
+                ? grp.opts.filter(function (o) { return o.text.toLowerCase().indexOf(q) !== -1; })
+                : grp.opts;
+            if (!matching.length) return;
+            var og = document.createElement('optgroup');
+            og.label = grp.label;
+            matching.forEach(function (o) {
+                var opt = document.createElement('option');
+                opt.value = o.value;
+                opt.text = o.text;
+                opt.dataset.type = o.type;
+                if (o.value === prev) opt.selected = true;
+                og.appendChild(opt);
+            });
+            selectEl.appendChild(og);
+        });
+    }
+
+    searchEl.addEventListener('input', function () { rebuild(this.value); });
+
+    selectEl.addEventListener('change', function () {
+        var sel = this.options[this.selectedIndex];
+        typeEl.value = sel ? (sel.dataset.type || 'Component') : 'Component';
+    });
+})();
+</script>
+{% endblock %}

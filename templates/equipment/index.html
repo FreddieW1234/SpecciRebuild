@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% block title %}Equipment{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb">
+    <a href="{{ url_for('dashboard.index') }}">Dashboard</a>
+    <span class="breadcrumb-sep">/</span>
+    <span class="breadcrumb-current">Equipment</span>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="page-header-left">
+        <h1 class="page-title">Equipment — Tool Heads</h1>
+        <p class="page-subtitle">{{ items|length }} tool head{{ 's' if items|length != 1 }}</p>
+    </div>
+    <div class="page-actions">
+        <a href="{{ url_for('equipment.new') }}" class="btn btn-primary">+ New Tool Head</a>
+    </div>
+</div>
+
+<div class="toolbar">
+    <form method="get" style="display:flex; gap:10px; flex-wrap:wrap; width:100%;">
+        <input type="text" name="q" value="{{ search }}" placeholder="Search by tool number or description…" class="search-input">
+        <select name="active" style="width:160px;">
+            <option value="">All</option>
+            <option value="active" {{ 'selected' if active_filter == 'active' }}>Active only</option>
+            <option value="inactive" {{ 'selected' if active_filter == 'inactive' }}>Inactive only</option>
+        </select>
+        <button type="submit" class="btn btn-secondary">Filter</button>
+        {% if search or active_filter %}
+        <a href="{{ url_for('equipment.index') }}" class="btn btn-ghost">Clear</a>
+        {% endif %}
+    </form>
+</div>
+
+{% if items %}
+<div class="table-wrapper">
+    <table>
+        <thead>
+            <tr>
+                <th>Tool Number</th>
+                <th>Description</th>
+                <th>Size</th>
+                <th>Supplier</th>
+                <th>Reserved For</th>
+                <th>Until</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for eq in items %}
+            <tr>
+                <td><span style="font-family:monospace; font-weight:600;">{{ eq.tool_number }}</span></td>
+                <td>{{ eq.description or '—' }}</td>
+                <td>{{ eq.size_raw or '—' }}</td>
+                <td>{{ eq.supplier or '—' }}</td>
+                <td>{{ eq.unique_for or '—' }}</td>
+                <td style="font-size:12px; color:var(--color-text-muted);">{{ eq.unique_until or '—' }}</td>
+                <td>
+                    {% if eq.is_active %}
+                    <span class="badge badge-active">Active</span>
+                    {% else %}
+                    <span class="badge badge-draft">Inactive</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <div class="table-actions">
+                        <a href="{{ url_for('equipment.edit', id=eq.id) }}" class="btn btn-sm btn-secondary">Edit</a>
+                        <form method="post" action="{{ url_for('equipment.toggle_active', id=eq.id) }}">
+                            <button type="submit" class="btn btn-sm btn-ghost">
+                                {{ 'Deactivate' if eq.is_active else 'Activate' }}
+                            </button>
+                        </form>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="card">
+    <div class="empty-state">
+        <div class="empty-state-icon">🔧</div>
+        <h3>No tool heads yet</h3>
+        <p>Add your first tool head to get started.</p>
+        <a href="{{ url_for('equipment.new') }}" class="btn btn-primary">+ New Tool Head</a>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

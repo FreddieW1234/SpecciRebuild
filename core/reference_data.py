@@ -10,6 +10,13 @@ COMPONENT_TYPES = [
     'Mixed Product', 'Finished Product', 'Base Product', 'Ingredient', 'Sub Ingredient'
 ]
 
+# Types available when creating/editing components (Finished Product lives in its own module)
+COMPONENT_TYPES_FORM = [
+    'Mixed Product', 'Base Product', 'Ingredient', 'Sub Ingredient'
+]
+
+COMPANY_ASSIGNMENT_OPTIONS = ['Both', 'Michton', 'Bakeart']
+
 PRODUCT_LEVELS = [
     'Source Material', 'Raw Material', 'Component (Manufactured)',
     'Component (Purchased)', 'Finished Product (Manufactured)',

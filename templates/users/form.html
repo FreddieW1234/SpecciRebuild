@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block title %}{{ 'New User' if is_new else 'Edit ' + user.username }}{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb">
+    <a href="{{ url_for('dashboard.index') }}">Dashboard</a>
+    <span class="breadcrumb-sep">/</span>
+    <a href="{{ url_for('users.index') }}">Users</a>
+    <span class="breadcrumb-sep">/</span>
+    <span class="breadcrumb-current">{{ 'New' if is_new else 'Edit' }}</span>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="page-header-left">
+        <h1 class="page-title">{{ 'New User' if is_new else 'Edit User' }}</h1>
+    </div>
+    <div class="page-actions">
+        <a href="{{ url_for('users.index') }}" class="btn btn-ghost">Cancel</a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <form method="post">
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Username *</label>
+                    <input type="text" name="username" value="{{ user.username or '' }}" required autofocus autocomplete="off">
+                </div>
+                <div class="form-group">
+                    <label>Display Name</label>
+                    <input type="text" name="display_name" value="{{ user.display_name or '' }}" placeholder="Full name shown in the app">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Email Address *</label>
+                    <input type="email" name="email" value="{{ user.email or '' }}" required>
+                </div>
+                <div class="form-group">
+                    <label>Work Phone</label>
+                    <input type="tel" name="work_phone" value="{{ user.work_phone or '' }}">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Position / Job Title</label>
+                    <input type="text" name="position" value="{{ user.position or '' }}">
+                </div>
+                <div class="form-group">
+                    <label>Role</label>
+                    <select name="role">
+                        {% for r in roles %}
+                        <option value="{{ r }}" {{ 'selected' if user.role == r or (is_new and r == 'user') }}>{{ r|title }}</option>
+                        {% endfor %}
+                    </select>
+                    <div class="form-hint">Admin: full access. User: standard access. Viewer: read-only.</div>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Password {% if not is_new %}<span style="font-weight:400; text-transform:none; font-size:11px;">(leave blank to keep current)</span>{% else %}*{% endif %}</label>
+                    <input type="password" name="password" autocomplete="new-password"
+                           {% if is_new %}required{% endif %} minlength="8"
+                           placeholder="{% if not is_new %}Leave blank to keep current{% else %}Min 8 characters{% endif %}">
+                </div>
+                <div class="form-group" style="display:flex; align-items:flex-end; padding-bottom:4px;">
+                    <div class="checkbox-group">
+                        <input type="checkbox" name="is_active" id="is_active"
+                               {{ 'checked' if user.is_active or is_new }}>
+                        <label for="is_active">Account is active</label>
+                    </div>
+                </div>
+            </div>
+            <div style="margin-top:8px; display:flex; gap:10px;">
+                <button type="submit" class="btn btn-primary">{{ 'Create User' if is_new else 'Save Changes' }}</button>
+                <a href="{{ url_for('users.index') }}" class="btn btn-ghost">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

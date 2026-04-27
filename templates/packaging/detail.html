@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block title %}{{ pkg.internal_description }}{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb">
+    <a href="{{ url_for('dashboard.index') }}">Dashboard</a>
+    <span class="breadcrumb-sep">/</span>
+    <a href="{{ url_for('packaging.index') }}">Packaging</a>
+    <span class="breadcrumb-sep">/</span>
+    <span class="breadcrumb-current">{{ pkg.internal_description }}</span>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="page-header-left">
+        <div class="component-code">{{ pkg.ba_code or 'No BA code' }}</div>
+        <h1 class="page-title">{{ pkg.internal_description }}</h1>
+        <div style="display:flex; gap:10px; align-items:center; margin-top:6px;">
+            {% set s = (pkg.status or 'draft') | lower | replace(' ', '-') %}
+            <span class="badge badge-{{ s }}">{{ pkg.status or 'Draft' }}</span>
+            {% if pkg.packaging_type %}<span style="font-size:12px; color:var(--color-text-muted);">{{ pkg.packaging_type }}</span>{% endif %}
+        </div>
+    </div>
+    <div class="page-actions">
+        <a href="{{ url_for('packaging.edit', id=pkg.id) }}" class="btn btn-primary">Edit</a>
+        <form method="post" action="{{ url_for('packaging.delete', id=pkg.id) }}"
+              data-confirm="Delete '{{ pkg.internal_description }}'?">
+            <button type="submit" class="btn btn-danger">Delete</button>
+        </form>
+    </div>
+</div>
+
+<div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
+
+    <div class="card">
+        <div class="card-header"><span class="card-title">Basic Information</span></div>
+        <div class="card-body">
+            <dl style="display:grid; grid-template-columns:160px 1fr; gap:6px 12px; font-size:13px;">
+                <dt style="font-weight:600; color:var(--color-text-muted);">BA Code</dt><dd style="font-family:monospace;">{{ pkg.ba_code or '—' }}</dd>
+                <dt style="font-weight:600; color:var(--color-text-muted);">Type</dt><dd>{{ pkg.packaging_type or '—' }}</dd>
+                <dt style="font-weight:600; color:var(--color-text-muted);">Material</dt><dd>{{ pkg.material_category or '—' }}{% if pkg.specific_material %} — {{ pkg.specific_material }}{% endif %}</dd>
+                <dt style="font-weight:600; color:var(--color-text-muted);">Colour</dt><dd>{{ pkg.colour or '—' }}</dd>
+                <dt style="font-weight:600; color:var(--color-text-muted);">Barcode Type</dt><dd>{{ pkg.barcode_type or '—' }}</dd>
+                <dt style="font-weight:600; color:var(--color-text-muted);">Printing</dt><dd>{{ 'Yes' if pkg.printing_labelling else 'No' }}{% if pkg.printing_description %} — {{ pkg.printing_description }}{% endif %}</dd>
+            </dl>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header"><span class="card-title">Dimensions &amp; Weight</span></div>
+        <div class="card-body">
+            <dl style="display:grid; grid-template-columns:160px 1fr; gap:6px 12px; font-size:13px;">
+                <dt style="font-weight:600; color:var(--color-text-muted);">L × W × H</dt>
+                <dd>{{ pkg.length_mm or '—' }} × {{ pkg.width_mm or '—' }} × {{ pkg.height_mm or '—' }} mm</dd>
+                <dt style="font-weight:600; color:var(--color-text-muted);">Diameter</dt><dd>{{ (pkg.diameter_mm | string + ' mm') if pkg.diameter_mm else '—' }}</dd>
+                <dt style="font-weight:600; color:var(--color-text-muted);">Capacity</dt><dd>{{ pkg.capacity_volume or '—' }}</dd>
+                <dt style="font-weight:600; color:var(--color-text-muted);">Empty Weight</dt><dd>{{ (pkg.packaging_weight_grams | string + ' g') if pkg.packaging_weight_grams else '—' }}</dd>
+            </dl>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header"><span class="card-title">Food Safety &amp; Sustainability</span></div>
+        <div class="card-body">
+            <dl style="display:grid; grid-template-columns:160px 1fr; gap:6px 12px; font-size:13px;">
+                <dt style="font-weight:600; color:var(--color-text-muted);">Food Contact</dt>
+                <dd>{% if pkg.food_contact_approved %}<span class="badge badge-active">Approved</span>{% else %}<span class="badge badge-draft">Not Approved</span>{% endif %}</dd>
+                <dt style="font-weight:600; color:var(--color-text-muted);">Recyclable</dt><dd>{{ 'Yes' if pkg.recyclable else 'No' }}</dd>
+                <dt style="font-weight:600; color:var(--color-text-muted);">Compostable</dt><dd>{{ 'Yes' if pkg.compostable else 'No' }}</dd>
+                <dt style="font-weight:600; color:var(--color-text-muted);">Temp Range</dt>
+                <dd>{{ pkg.temp_range_min or '—' }} to {{ pkg.temp_range_max or '—' }} °C</dd>
+                <dt style="font-weight:600; color:var(--color-text-muted);">Shelf Life</dt>
+                <dd>{{ (pkg.packaging_shelf_life_months | string + ' months') if pkg.packaging_shelf_life_months else '—' }}</dd>
+            </dl>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header"><span class="card-title">Commercial</span></div>
+        <div class="card-body">
+            <dl style="display:grid; grid-template-columns:160px 1fr; gap:6px 12px; font-size:13px;">
+                {% set sup = suppliers | selectattr('id', 'eq', pkg.supplier_id) | first if pkg.supplier_id else none %}
+                <dt style="font-weight:600; color:var(--color-text-muted);">Supplier</dt><dd>{{ sup.supplier_name if sup else '—' }}</dd>
+                <dt style="font-weight:600; color:var(--color-text-muted);">Supplier Code</dt><dd>{{ pkg.supplier_product_code or '—' }}</dd>
+                <dt style="font-weight:600; color:var(--color-text-muted);">Unit Cost</dt>
+                <dd>{% if pkg.cost_per_unit %}{{ pkg.currency or 'GBP' }} {{ '%.4f'|format(pkg.cost_per_unit) }}{% else %}—{% endif %}</dd>
+                <dt style="font-weight:600; color:var(--color-text-muted);">Min Order</dt><dd>{{ pkg.minimum_order_quantity or '—' }}</dd>
+                <dt style="font-weight:600; color:var(--color-text-muted);">Lead Time</dt>
+                <dd>{{ (pkg.lead_time_days | string + ' days') if pkg.lead_time_days else '—' }}</dd>
+            </dl>
+        </div>
+    </div>
+
+</div>
+
+{% if pkg.notes %}
+<div class="card" style="margin-top:20px;">
+    <div class="card-header"><span class="card-title">Notes</span></div>
+    <div class="card-body">
+        <p style="font-size:13px; white-space:pre-wrap;">{{ pkg.notes }}</p>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

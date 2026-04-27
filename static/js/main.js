@@ -70,4 +70,24 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }, 5000);
 
+  // ---- Company switcher dropdown ----
+  var switcher = document.getElementById('companySwitcherBtn');
+  var switcherWrap = switcher && switcher.closest('.company-switcher');
+  if (switcher && switcherWrap) {
+    switcher.addEventListener('click', function (e) {
+      e.stopPropagation();
+      var open = switcherWrap.classList.toggle('open');
+      switcher.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+    document.addEventListener('click', function () {
+      switcherWrap.classList.remove('open');
+      switcher.setAttribute('aria-expanded', 'false');
+    });
+    // Prevent clicks inside dropdown from closing it
+    var dropdown = document.getElementById('companySwitcherDropdown');
+    if (dropdown) {
+      dropdown.addEventListener('click', function (e) { e.stopPropagation(); });
+    }
+  }
+
 });

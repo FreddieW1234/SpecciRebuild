@@ -1,0 +1,200 @@
+{% extends "base.html" %}
+{% block title %}{{ 'New Packaging Component' if is_new else 'Edit ' + pkg.internal_description }}{% endblock %}
+
+{% block breadcrumb %}
+<div class="breadcrumb">
+    <a href="{{ url_for('dashboard.index') }}">Dashboard</a>
+    <span class="breadcrumb-sep">/</span>
+    <a href="{{ url_for('packaging.index') }}">Packaging</a>
+    <span class="breadcrumb-sep">/</span>
+    <span class="breadcrumb-current">{{ 'New' if is_new else 'Edit' }}</span>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="page-header-left">
+        <h1 class="page-title">{{ 'New Packaging Component' if is_new else 'Edit Packaging Component' }}</h1>
+    </div>
+    <div class="page-actions">
+        {% if not is_new %}
+        <a href="{{ url_for('packaging.detail', id=pkg.id) }}" class="btn btn-ghost">Cancel</a>
+        {% else %}
+        <a href="{{ url_for('packaging.index') }}" class="btn btn-ghost">Cancel</a>
+        {% endif %}
+    </div>
+</div>
+
+<form method="post">
+    <div class="card" style="margin-bottom:16px;">
+        <div class="card-header"><span class="card-title">Basic Information</span></div>
+        <div class="card-body">
+            <div class="form-row">
+                <div class="form-group">
+                    <label>BA Code</label>
+                    <input type="text" name="ba_code" value="{{ pkg.ba_code or '' }}" placeholder="e.g. PKG-001">
+                </div>
+                <div class="form-group">
+                    <label>Internal Description *</label>
+                    <input type="text" name="internal_description" value="{{ pkg.internal_description or '' }}" required autofocus>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Packaging Type</label>
+                    <select name="packaging_type">
+                        <option value="">Select…</option>
+                        {% for t in packaging_types %}
+                        <option value="{{ t }}" {{ 'selected' if pkg.packaging_type == t }}>{{ t }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Material Category</label>
+                    <select name="material_category">
+                        <option value="">Select…</option>
+                        {% for m in material_categories %}
+                        <option value="{{ m }}" {{ 'selected' if pkg.material_category == m }}>{{ m }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Specific Material</label>
+                    <input type="text" name="specific_material" value="{{ pkg.specific_material or '' }}" placeholder="e.g. LDPE, Kraft paper">
+                </div>
+                <div class="form-group">
+                    <label>Colour</label>
+                    <input type="text" name="colour" value="{{ pkg.colour or '' }}">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Status</label>
+                    <select name="status">
+                        {% for s in statuses %}
+                        <option value="{{ s }}" {{ 'selected' if pkg.status == s }}>{{ s }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Supplier</label>
+                    <select name="supplier_id">
+                        <option value="">None</option>
+                        {% for s in suppliers %}
+                        <option value="{{ s.id }}" {{ 'selected' if pkg.supplier_id == s.id }}>{{ s.supplier_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Supplier Product Code</label>
+                    <input type="text" name="supplier_product_code" value="{{ pkg.supplier_product_code or '' }}">
+                </div>
+                <div class="form-group">
+                    <label>Supplier Description</label>
+                    <input type="text" name="supplier_description" value="{{ pkg.supplier_description or '' }}">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card" style="margin-bottom:16px;">
+        <div class="card-header"><span class="card-title">Dimensions &amp; Weight</span></div>
+        <div class="card-body">
+            <div class="form-row-4">
+                <div class="form-group"><label>Length (mm)</label><input type="number" name="length_mm" step="0.1" value="{{ pkg.length_mm or '' }}"></div>
+                <div class="form-group"><label>Width (mm)</label><input type="number" name="width_mm" step="0.1" value="{{ pkg.width_mm or '' }}"></div>
+                <div class="form-group"><label>Height (mm)</label><input type="number" name="height_mm" step="0.1" value="{{ pkg.height_mm or '' }}"></div>
+                <div class="form-group"><label>Diameter (mm)</label><input type="number" name="diameter_mm" step="0.1" value="{{ pkg.diameter_mm or '' }}"></div>
+            </div>
+            <div class="form-row">
+                <div class="form-group"><label>Capacity / Volume</label><input type="text" name="capacity_volume" value="{{ pkg.capacity_volume or '' }}" placeholder="e.g. 250ml"></div>
+                <div class="form-group"><label>Packaging Weight (g)</label><input type="number" name="packaging_weight_grams" step="0.01" value="{{ pkg.packaging_weight_grams or '' }}"></div>
+            </div>
+            <div class="form-row">
+                <div class="form-group"><label>Barcode Type</label><input type="text" name="barcode_type" value="{{ pkg.barcode_type or '' }}" placeholder="e.g. EAN-13, ITF-14"></div>
+                <div class="form-group">
+                    <div class="checkbox-group" style="margin-top:24px;">
+                        <input type="checkbox" name="printing_labelling" id="printing_labelling" {{ 'checked' if pkg.printing_labelling }}>
+                        <label for="printing_labelling">Has printing / labelling</label>
+                    </div>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Printing Description</label>
+                <input type="text" name="printing_description" value="{{ pkg.printing_description or '' }}">
+            </div>
+        </div>
+    </div>
+
+    <div class="card" style="margin-bottom:16px;">
+        <div class="card-header"><span class="card-title">Food Safety &amp; Sustainability</span></div>
+        <div class="card-body">
+            <div class="form-row">
+                <div class="form-group">
+                    <div class="checkbox-group">
+                        <input type="checkbox" name="food_contact_approved" id="food_contact_approved" {{ 'checked' if pkg.food_contact_approved }}>
+                        <label for="food_contact_approved">Food Contact Approved</label>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <div class="checkbox-group">
+                        <input type="checkbox" name="recyclable" id="recyclable" {{ 'checked' if pkg.recyclable }}>
+                        <label for="recyclable">Recyclable</label>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <div class="checkbox-group">
+                        <input type="checkbox" name="compostable" id="compostable" {{ 'checked' if pkg.compostable }}>
+                        <label for="compostable">Compostable</label>
+                    </div>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group"><label>Min Temperature (°C)</label><input type="number" name="temp_range_min" step="1" value="{{ pkg.temp_range_min or '' }}"></div>
+                <div class="form-group"><label>Max Temperature (°C)</label><input type="number" name="temp_range_max" step="1" value="{{ pkg.temp_range_max or '' }}"></div>
+            </div>
+            <div class="form-group"><label>Storage Conditions</label><textarea name="storage_conditions" rows="2">{{ pkg.storage_conditions or '' }}</textarea></div>
+            <div class="form-group"><label>Packaging Shelf Life (months)</label><input type="number" name="packaging_shelf_life_months" step="0.5" value="{{ pkg.packaging_shelf_life_months or '' }}" style="max-width:200px;"></div>
+        </div>
+    </div>
+
+    <div class="card" style="margin-bottom:16px;">
+        <div class="card-header"><span class="card-title">Commercial</span></div>
+        <div class="card-body">
+            <div class="form-row">
+                <div class="form-group"><label>Cost per Unit</label><input type="number" name="cost_per_unit" step="0.0001" value="{{ pkg.cost_per_unit or '' }}"></div>
+                <div class="form-group">
+                    <label>Currency</label>
+                    <select name="currency">
+                        {% for c in currencies %}
+                        <option value="{{ c }}" {{ 'selected' if pkg.currency == c }}>{{ c }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group"><label>Minimum Order Quantity</label><input type="number" name="minimum_order_quantity" step="1" value="{{ pkg.minimum_order_quantity or '' }}"></div>
+                <div class="form-group"><label>Lead Time (days)</label><input type="number" name="lead_time_days" step="1" value="{{ pkg.lead_time_days or '' }}"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card" style="margin-bottom:16px;">
+        <div class="card-header"><span class="card-title">Notes</span></div>
+        <div class="card-body">
+            <div class="form-group"><textarea name="notes" rows="4">{{ pkg.notes or '' }}</textarea></div>
+        </div>
+    </div>
+
+    <div style="display:flex; gap:10px;">
+        <button type="submit" class="btn btn-primary">{{ 'Create' if is_new else 'Save Changes' }}</button>
+        {% if not is_new %}
+        <a href="{{ url_for('packaging.detail', id=pkg.id) }}" class="btn btn-ghost">Cancel</a>
+        {% endif %}
+    </div>
+</form>
+{% endblock %}
